@@ -1,0 +1,60 @@
+{% load static %}
+
+<div class="mb-3">
+    <a href="{% url 'daotao:them_hoc_phan_hang_loat' ctdt.id %}" class="btn btn-success btn-sm">
+        <i class="fas fa-plus"></i> Thêm Học phần hàng loạt
+    </a>
+</div>
+
+{% if hoc_phan_trong_ctdt %}
+<div class="table-responsive">
+    <table class="table table-bordered table-hover">
+        <thead>
+            <tr>
+                <th rowspan="3">TT</th>
+                <th rowspan="3">Mã học phần</th>
+                <th rowspan="3">Tên học phần</th>
+                <th rowspan="3">Tổng số tín chỉ</th>
+                <th colspan="2">Lý thuyết</th>
+                <th colspan="2">Thực hành</th>
+                <th rowspan="3">Giờ Tự học và giờ học khác</th>
+                <th rowspan="3">Ghi chú</th>
+                <th rowspan="3">Thao tác</th>
+            </tr>
+            <tr>
+                <th colspan="4">Giờ dự giảng</th>
+            </tr>
+            <tr>
+                <th>Tín chỉ</th>
+                <th>Số giờ</th>
+                <th>Tín chỉ</th>
+                <th>Số giờ</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for hp in hoc_phan_trong_ctdt %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ hp.hoc_phan.ma_hoc_phan }}</td>
+                <td class="text-left">{{ hp.hoc_phan.ten_hoc_phan }}</td>
+                <td>{{ hp.hoc_phan.tong_so_tin_chi }}</td>
+                <td>{{ hp.tin_chi_ly_thuyet_apdung }}</td>
+                <td>{{ hp.so_gio_ly_thuyet_apdung }}</td>
+                <td>{{ hp.tin_chi_thuc_hanh_apdung }}</td>
+                <td>{{ hp.so_gio_thuc_hanh_apdung }}</td>
+                <td>{{ hp.so_gio_tu_hoc_apdung }}</td>
+                <td>{{ hp.ghi_chu_trong_ctdt }}</td>
+                <td>
+                    <a href="{% url 'daotao:sua_hoc_phan_ctdt' pk_chi_tiet_hp=hp.pk %}" class="btn btn-warning btn-sm" title="Sửa"><i class="fas fa-edit"></i></a>
+                    <a href="{% url 'daotao:xoa_hoc_phan_ctdt' pk_chi_tiet_hp=hp.pk %}" class="btn btn-danger btn-sm" title="Xóa"><i class="fas fa-trash"></i></a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<p>Chưa có học phần nào được thêm vào chương trình đào tạo này.</p>
+{% endif %}
+
+<a href="{% url 'daotao:sua_ctdt' ctdt.id %}" class="btn btn-secondary mt-3">Quay lại CTĐT</a>

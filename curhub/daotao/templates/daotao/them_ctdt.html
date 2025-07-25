@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load form_tags %}
+
+{% block title %}CURHUB | Thêm CTĐT{% endblock %}
+
+{% block page_title %}Thêm Mới Chương Trình Đào tạo{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'daotao:danh_sach_ctdt' %}">Quản lý CTĐT</a></li>
+    <li class="breadcrumb-item active">Thêm mới</li>
+{% endblock %}
+
+{% block content %}
+{% load crispy_forms_tags %}
+<form method="POST">
+    {% csrf_token %}
+    {% crispy form %}
+</form>
+{% endblock content %}
+
+{% block scripts %}
+<script>
+  function openAddNganhWindow() {
+    window.open("{% url 'daotao:them_nganh_dao_tao' %}", "_blank", "width=800,height=600");
+  }
+
+  function refreshNganhHocChung() {
+    $.ajax({
+      url: "{% url 'daotao:get_nganh_dao_tao_options' %}", // Create this URL in urls.py and view in views.py
+      type: "GET",
+      success: function(data) {
+        var select = $('#id_nganh_hoc_chung');
+        select.empty();
+        select.append($('<option>', {
+          value: '',
+          text: '---------'
+        }));
+        $.each(data, function(key, value) {
+          select.append($('<option>', {
+            value: value.pk,
+            text: value.ten_nganh
+          }));
+        });
+        select.val('').trigger('change'); // Reset to default or previously selected
+      },
+      error: function(xhr, status, error) {
+        console.error("Error refreshing Nganh Hoc Chung:", error);
+        alert("Không thể tải lại danh sách ngành học. Vui lòng thử lại.");
+      }
+    });
+  }
+
+  $(function () {
+    //Initialize Select2 Elements
+    $('.select2').select2({
+      theme: 'bootstrap4'
+    });
+
+    // Summernote
+    $('.summernote').summernote({
+        height: 150,
+        toolbar: [
+            ['style', ['style']],
+            ['font', ['bold', 'italic', 'underline', 'clear']],
+            ['para', ['ul', 'ol', 'paragraph']],
+            ['insert', ['link', 'picture']],
+            ['view', ['fullscreen', 'codeview', 'help']]
+        ]
+    });
+  })
+</script>
+{% endblock scripts %}

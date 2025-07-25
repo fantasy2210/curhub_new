@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+{% load static %}
+{% load form_tags %}
+
+{% block title %}Cập nhật Học phần{% endblock %}
+
+{% block page_title %}Cập nhật thông tin học phần{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'daotao:danh_sach_hoc_phan' %}">Quản lý Học phần</a></li>
+    <li class="breadcrumb-item active">Cập nhật</li>
+{% endblock %}
+
+{% block content %}
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title">Học phần: {{ form.instance.ten_hoc_phan }}</h3>
+    </div>
+    <form method="post" novalidate>
+        {% csrf_token %}
+        <div class="card-body">
+            <div class="row">
+                <!-- Cột trái -->
+                <div class="col-md-6">
+                    <h5>Thông tin cơ bản</h5>
+                    <hr>
+                    <div class="form-group">
+                        {{ form.ma_hoc_phan.label_tag }}
+                        {{ form.ma_hoc_phan|add_class:"form-control" }}
+                        {% if form.ma_hoc_phan.errors %}<div class="invalid-feedback d-block">{{ form.ma_hoc_phan.errors }}</div>{% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.ten_hoc_phan.label_tag }}
+                        {{ form.ten_hoc_phan|add_class:"form-control" }}
+                        {% if form.ten_hoc_phan.errors %}<div class="invalid-feedback d-block">{{ form.ten_hoc_phan.errors }}</div>{% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.ten_tieng_anh.label_tag }}
+                        {{ form.ten_tieng_anh|add_class:"form-control" }}
+                        {% if form.ten_tieng_anh.errors %}<div class="invalid-feedback d-block">{{ form.ten_tieng_anh.errors }}</div>{% endif %}
+                    </div>
+
+                    <h5>Phân bổ Tín chỉ & Giờ học</h5>
+                    <hr>
+                    <div class="row">
+                        <div class="col-sm-4">
+                            <div class="form-group">
+                                {{ form.tong_so_tin_chi_goc.label_tag }}
+                                {{ form.tong_so_tin_chi_goc|add_class:"form-control" }}
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="form-group">
+                                {{ form.tin_chi_ly_thuyet_goc.label_tag }}
+                                {{ form.tin_chi_ly_thuyet_goc|add_class:"form-control" }}
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="form-group">
+                                {{ form.tin_chi_thuc_hanh_goc.label_tag }}
+                                {{ form.tin_chi_thuc_hanh_goc|add_class:"form-control" }}
+                            </div>
+                        </div>
+                    </div>
+                     <div class="row">
+                        <div class="col-sm-4"><div class="form-group">{{ form.so_gio_ly_thuyet_goc.label_tag }}{{ form.so_gio_ly_thuyet_goc|add_class:"form-control" }}</div></div>
+                        <div class="col-sm-4"><div class="form-group">{{ form.so_gio_thuc_hanh_goc.label_tag }}{{ form.so_gio_thuc_hanh_goc|add_class:"form-control" }}</div></div>
+                        <div class="col-sm-4"><div class="form-group">{{ form.so_gio_tu_hoc_goc.label_tag }}{{ form.so_gio_tu_hoc_goc|add_class:"form-control" }}</div></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-4"><div class="form-group">{{ form.so_gio_bai_tap_goc.label_tag }}{{ form.so_gio_bai_tap_goc|add_class:"form-control" }}</div></div>
+                        <div class="col-sm-4"><div class="form-group">{{ form.so_gio_do_an_goc.label_tag }}{{ form.so_gio_do_an_goc|add_class:"form-control" }}</div></div>
+                        <div class="col-sm-4"><div class="form-group">{{ form.so_gio_luan_an_goc.label_tag }}{{ form.so_gio_luan_an_goc|add_class:"form-control" }}</div></div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-4"><div class="form-group">{{ form.so_gio_thuc_tap_goc.label_tag }}{{ form.so_gio_thuc_tap_goc|add_class:"form-control" }}</div></div>
+                        <div class="col-sm-4"><div class="form-group">{{ form.so_gio_bai_tap_lon_goc.label_tag }}{{ form.so_gio_bai_tap_lon_goc|add_class:"form-control" }}</div></div>
+                        <div class="col-sm-4"><div class="form-group">{{ form.so_gio_lms_goc.label_tag }}{{ form.so_gio_lms_goc|add_class:"form-control" }}</div></div>
+                    </div>
+                     <div class="row">
+                        <div class="col-sm-6"><div class="form-group">{{ form.so_tiet_tong_cong.label_tag }}{{ form.so_tiet_tong_cong|add_class:"form-control" }}</div></div>
+                        <div class="col-sm-6"><div class="form-group">{{ form.so_tin_chi_ects.label_tag }}{{ form.so_tin_chi_ects|add_class:"form-control" }}</div></div>
+                    </div>
+                </div>
+
+                <!-- Cột phải -->
+                <div class="col-md-6">
+                    <h5>Thông tin quản lý & Mô tả</h5>
+                    <hr>
+                    <div class="form-group">
+                        {{ form.don_vi_quan_ly_goc.label_tag }}
+                        {{ form.don_vi_quan_ly_goc|add_class:"form-control" }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.edusoft_id.label_tag }}
+                        {{ form.edusoft_id|add_class:"form-control" }}
+                    </div>
+                    <div class="form-group">
+                        {{ form.mo_ta_hoc_phan.label_tag }}
+                        {{ form.mo_ta_hoc_phan|add_class:"form-control" }}
+                        {% if form.mo_ta_hoc_phan.errors %}<div class="invalid-feedback d-block">{{ form.mo_ta_hoc_phan.errors }}</div>{% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.hoc_phan_tien_quyet.label_tag }}
+                        {{ form.hoc_phan_tien_quyet|add_class:"form-control" }}
+                        {% if form.hoc_phan_tien_quyet.errors %}<div class="invalid-feedback d-block">{{ form.hoc_phan_tien_quyet.errors }}</div>{% endif %}
+                    </div>
+                     <div class="form-group">
+                        {{ form.hoc_phan_song_hanh.label_tag }}
+                        {{ form.hoc_phan_song_hanh|add_class:"form-control" }}
+                        {% if form.hoc_phan_song_hanh.errors %}<div class="invalid-feedback d-block">{{ form.hoc_phan_song_hanh.errors }}</div>{% endif %}
+                    </div>
+                    <hr>
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.la_hoc_phan_tu_chon|add_class:"form-check-input" }}
+                            {{ form.la_hoc_phan_tu_chon.label_tag }}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="form-check">
+                            {{ form.khong_tinh_diem_tb|add_class:"form-check-input" }}
+                            {{ form.khong_tinh_diem_tb.label_tag }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer text-right">
+            <a href="{% url 'daotao:danh_sach_hoc_phan' %}" class="btn btn-secondary">Hủy</a>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Lưu thay đổi</button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    function initializeSelect2Ajax(element) {
+        $(element).select2({
+            theme: 'bootstrap4',
+            width: '100%',
+            ajax: {
+                url: "{% url 'daotao:search_hoc_phan_api' %}",
+                dataType: 'json',
+                delay: 250, // wait 250 milliseconds before triggering the request
+                data: function (params) {
+                    return {
+                        q: params.term, // search term
+                        page: params.page || 1
+                    };
+                },
+                processResults: function (data, params) {
+                    params.page = params.page || 1;
+                    return {
+                        results: data.results,
+                        pagination: {
+                            more: data.pagination.more
+                        }
+                    };
+                },
+                cache: true
+            },
+            placeholder: 'Tìm kiếm học phần',
+            minimumInputLength: 2,
+        });
+    }
+
+    // Initialize for existing fields
+    initializeSelect2Ajax('#id_hoc_phan_tien_quyet');
+    initializeSelect2Ajax('#id_hoc_phan_song_hanh');
+    
+    // Also initialize any other standard select2 elements you might have
+    $('.select2').not('.select2-ajax').select2({
+        theme: 'bootstrap4'
+    });
+});
+</script>
+{% endblock %}

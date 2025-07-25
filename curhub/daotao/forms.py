@@ -1,0 +1,314 @@
+from django import forms
+from django.forms import inlineformset_factory
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Row, Column, Fieldset, Submit, HTML
+from .models import (
+    NganhDaoTao, ChuongTrinhDaoTao, HocPhan, ChiTietHocPhanTrongCTDT,
+    DonViDaoTao, MucTieuDaoTao, ChuanDauRa, DanhMucKienThuc, DeCuongHocPhan, ChuanDauRaHocPhan, NoiDungChiTietDeCuong, HinhThucDanhGia
+)
+
+class NganhDaoTaoForm(forms.ModelForm):
+    class Meta:
+        model = NganhDaoTao
+        fields = '__all__'
+
+class ChuongTrinhDaoTaoModelForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column(
+                    Fieldset(
+                        'Thông tin Định danh',
+                        Row(
+                            Column('ma_nganh_ctdt', css_class='form-group col-md-6 mb-0'),
+                            Column('ten_nganh_ctdt', css_class='form-group col-md-6 mb-0'),
+                        ),
+                        'ten_tieng_anh',
+                        css_class='card-body'
+                    ),
+                    Fieldset(
+                        'Thông tin Mô tả',
+                        'mo_ta_chung',
+                        'doi_tuong_tuyen_sinh',
+                        'dieu_kien_tot_nghiep',
+                        'chuong_trinh_tham_khao',
+                        css_class='card-body'
+                    ),
+                    css_class='col-lg-8'
+                ),
+                Column(
+                    Fieldset(
+                        'Thuộc tính & Phân loại',
+                        'don_vi_quan_ly',
+                        'nganh_hoc_chung',
+                        'trinh_do_dao_tao',
+                        'hinh_thuc_dao_tao',
+                        'van_bang_tot_nghiep',
+                        'so_tin_chi_yeu_cau',
+                        'thoi_gian_dao_tao',
+                        css_class='card-body'
+                    ),
+                    Fieldset(
+                        'Thông tin Ban hành',
+                        'so_quyet_dinh_ban_hanh',
+                        'ngay_ban_hanh_qd',
+                        'ghi_chu_ctdt',
+                        css_class='card-body'
+                    ),
+                    Submit('submit', 'Lưu Chương Trình', css_class='btn btn-primary w-100'),
+                    HTML('<a href="{% url \'daotao:danh_sach_ctdt\' %}" class="btn btn-secondary w-100 mt-2">Hủy</a>'),
+                    css_class='col-lg-4'
+                )
+            )
+        )
+
+    class Meta:
+        model = ChuongTrinhDaoTao
+        fields = [
+            'ma_nganh_ctdt', 'ten_nganh_ctdt', 'ten_tieng_anh', 'nganh_hoc_chung',
+            'trinh_do_dao_tao', 'hinh_thuc_dao_tao', 'so_tin_chi_yeu_cau',
+            'thoi_gian_dao_tao', 'doi_tuong_tuyen_sinh', 'dieu_kien_tot_nghiep',
+            'van_bang_tot_nghiep', 'chuong_trinh_tham_khao', 'don_vi_quan_ly',
+            'mo_ta_chung', 'so_quyet_dinh_ban_hanh', 'ngay_ban_hanh_qd', 'ghi_chu_ctdt'
+        ]
+        widgets = {
+            # Textarea fields for Summernote
+            'mo_ta_chung': forms.Textarea(attrs={'class': 'summernote'}),
+            'doi_tuong_tuyen_sinh': forms.Textarea(attrs={'class': 'summernote'}),
+            'dieu_kien_tot_nghiep': forms.Textarea(attrs={'class': 'summernote'}),
+            'chuong_trinh_tham_khao': forms.Textarea(attrs={'class': 'summernote'}),
+            'ghi_chu_ctdt': forms.Textarea(attrs={'rows': 3}),
+
+            # Select fields for Select2
+            'nganh_hoc_chung': forms.Select(attrs={'class': 'select2'}),
+            'trinh_do_dao_tao': forms.Select(attrs={'class': 'select2'}),
+            'hinh_thuc_dao_tao': forms.Select(attrs={'class': 'select2'}),
+            'van_bang_tot_nghiep': forms.Select(attrs={'class': 'select2'}),
+            'don_vi_quan_ly': forms.Select(attrs={'class': 'select2'}),
+            
+            # Date picker
+            'ngay_ban_hanh_qd': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+class HocPhanLibModelForm(forms.ModelForm):
+    class Meta:
+        model = HocPhan
+        fields = '__all__'
+
+class ChiTietHocPhanTrongCTDTModelForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        instance = kwargs.get('instance')
+        if instance and instance.chuong_trinh_dao_tao:
+            # Limit choices to other courses in the same CTDT
+            valid_choices = ChiTietHocPhanTrongCTDT.objects.filter(
+                chuong_trinh_dao_tao=instance.chuong_trinh_dao_tao
+            ).exclude(pk=instance.pk)
+            
+            self.fields['hoc_phan_tien_quyet'].queryset = valid_choices
+            self.fields['hoc_phan_song_hanh'].queryset = valid_choices
+            
+            # Pre-select current relations
+            tien_quyet_pks = instance.hoc_phan_tien_quyet.values_list('pk', flat=True)
+            song_hanh_pks = instance.hoc_phan_song_hanh.values_list('pk', flat=True)
+            
+            self.initial['hoc_phan_tien_quyet'] = list(tien_quyet_pks)
+            self.initial['hoc_phan_song_hanh'] = list(song_hanh_pks)
+
+    class Meta:
+        model = ChiTietHocPhanTrongCTDT
+        fields = '__all__'
+        exclude = ('chuong_trinh_dao_tao', 'hoc_phan')
+        widgets = {
+            'hoc_phan_tien_quyet': forms.SelectMultiple(attrs={'class': 'select2'}),
+            'hoc_phan_song_hanh': forms.SelectMultiple(attrs={'class': 'select2'}),
+        }
+
+class DonViDaoTaoForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Fieldset(
+                'Thông tin Đơn vị Đào tạo',
+                'ma_don_vi',
+                'ten_don_vi',
+                'don_vi_cha',
+                'mo_ta',
+                css_class='card-body'
+            ),
+            Row(
+                Column(
+                    Submit('submit', 'Lưu Đơn vị', css_class='btn btn-primary w-100'),
+                    css_class='col-lg-6'
+                ),
+                Column(
+                    HTML('<a href="{% url \'daotao:danh_sach_don_vi\' %}" class="btn btn-secondary w-100">Hủy</a>'),
+                    css_class='col-lg-6'
+                )
+            )
+        )
+
+    class Meta:
+        model = DonViDaoTao
+        fields = ['ma_don_vi', 'ten_don_vi', 'don_vi_cha', 'mo_ta']
+        widgets = {
+            'don_vi_cha': forms.Select(attrs={'class': 'select2'}),
+            'mo_ta': forms.Textarea(attrs={'class': 'summernote'}),
+        }
+
+class MucTieuDaoTaoForm(forms.ModelForm):
+    class Meta:
+        model = MucTieuDaoTao
+        fields = '__all__'
+        exclude = ('chuong_trinh_dao_tao',) # Exclude FK as it's set in view
+
+MucTieuDaoTaoFormSet = inlineformset_factory(
+    ChuongTrinhDaoTao,
+    MucTieuDaoTao,
+    form=MucTieuDaoTaoForm,
+    extra=1,
+    can_delete=True
+)
+
+class ChuanDauRaForm(forms.ModelForm):
+    class Meta:
+        model = ChuanDauRa
+        fields = '__all__'
+        exclude = ('chuong_trinh_dao_tao',) # Exclude FK as it's set in view
+
+ChuanDauRaFormSet = inlineformset_factory(
+    ChuongTrinhDaoTao,
+    ChuanDauRa,
+    form=ChuanDauRaForm,
+    extra=1,
+    can_delete=True
+)
+
+class UploadHocPhanCTDTForm(forms.Form):
+    file = forms.FileField(label="Chọn tệp Excel (.xlsx) hoặc CSV (.csv)")
+
+class DanhMucKienThucForm(forms.ModelForm):
+    class Meta:
+        model = DanhMucKienThuc
+        fields = '__all__'
+
+class DeCuongHocPhanForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column(
+                    Fieldset(
+                        'Thông tin Phiên bản',
+                        Row(
+                            Column('ten_de_cuong_phien_ban', css_class='form-group col-md-6 mb-0'),
+                            Column('so_phien_ban', css_class='form-group col-md-3 mb-0'),
+                            Column('ngay_ban_hanh', css_class='form-group col-md-3 mb-0'),
+                        ),
+                        'ly_do_cap_nhat',
+                        'la_phien_ban_hien_hanh',
+                        css_class='card-body'
+                    ),
+                    css_class='col-md-12'
+                ),
+            ),
+            Row(
+                Column('muc_tieu_hoc_phan', css_class='col-md-6'),
+                Column('tom_tat_noi_dung', css_class='col-md-6'),
+            ),
+            Row(
+                Column('phuong_phap_day_hoc', css_class='col-md-6'),
+                Column('nhiem_vu_sinh_vien', css_class='col-md-6'),
+            ),
+            Row(
+                Column('thang_diem_danh_gia', css_class='col-md-6'),
+                Column('tai_lieu_hoc_tap', css_class='col-md-6'),
+            ),
+            Row(
+                Column('cac_yeu_cau_khac', css_class='col-md-12'),
+            )
+        )
+
+    class Meta:
+        model = DeCuongHocPhan
+        fields = [
+            'ten_de_cuong_phien_ban', 'so_phien_ban', 'ngay_ban_hanh',
+            'ly_do_cap_nhat', 'la_phien_ban_hien_hanh', 'muc_tieu_hoc_phan',
+            'tom_tat_noi_dung', 'phuong_phap_day_hoc', 'nhiem_vu_sinh_vien',
+            'thang_diem_danh_gia', 'tai_lieu_hoc_tap', 'cac_yeu_cau_khac'
+        ]
+        widgets = {
+            'ngay_ban_hanh': forms.DateInput(attrs={'type': 'date'}),
+            'ly_do_cap_nhat': forms.Textarea(attrs={'rows': 3}),
+            'muc_tieu_hoc_phan': forms.Textarea(attrs={'class': 'summernote'}),
+            'tom_tat_noi_dung': forms.Textarea(attrs={'class': 'summernote'}),
+            'phuong_phap_day_hoc': forms.Textarea(attrs={'class': 'summernote'}),
+            'nhiem_vu_sinh_vien': forms.Textarea(attrs={'class': 'summernote'}),
+            'thang_diem_danh_gia': forms.Textarea(attrs={'class': 'summernote'}),
+            'tai_lieu_hoc_tap': forms.Textarea(attrs={'class': 'summernote'}),
+            'cac_yeu_cau_khac': forms.Textarea(attrs={'class': 'summernote'}),
+        }
+
+class ChuanDauRaHocPhanForm(forms.ModelForm):
+    class Meta:
+        model = ChuanDauRaHocPhan
+        fields = ['ma_clo', 'loai_clo', 'noi_dung', 'muc_do_bloom']
+        widgets = {
+            'ma_clo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Mã CLO'}),
+            'loai_clo': forms.Select(attrs={'class': 'form-control'}),
+            'noi_dung': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'Nội dung'}),
+            'muc_do_bloom': forms.Select(attrs={'class': 'form-control'}),
+        }
+
+ChuanDauRaHocPhanFormSet = inlineformset_factory(
+    DeCuongHocPhan,
+    ChuanDauRaHocPhan,
+    form=ChuanDauRaHocPhanForm,
+    fk_name='de_cuong',
+    extra=1,
+    can_delete=True
+)
+
+
+class NoiDungChiTietDeCuongForm(forms.ModelForm):
+    class Meta:
+        model = NoiDungChiTietDeCuong
+        fields = ['tuan_hoc_hoac_chu_de', 'noi_dung_giang_day', 'so_gio_ly_thuyet',
+                  'so_gio_thuc_hanh', 'so_gio_tu_hoc', 'chuan_dau_ra_lien_quan']
+        widgets = {
+            'noi_dung_giang_day': forms.Textarea(attrs={'rows': 2}),
+            'chuan_dau_ra_hoc_phan': forms.SelectMultiple(attrs={'class': 'select2'}),
+        }
+
+NoiDungChiTietDeCuongFormSet = inlineformset_factory(
+    DeCuongHocPhan,
+    NoiDungChiTietDeCuong,
+    form=NoiDungChiTietDeCuongForm,
+    fk_name='de_cuong_hoc_phan',
+    extra=1,
+    can_delete=True
+)
+
+class HinhThucDanhGiaForm(forms.ModelForm):
+    class Meta:
+        model = HinhThucDanhGia
+        fields = ['loai_danh_gia', 'ten_hinh_thuc', 'ty_le_diem', 'chuan_dau_ra_danh_gia']
+        widgets = {
+            'chuan_dau_ra_danh_gia': forms.SelectMultiple(attrs={'class': 'select2'}),
+        }
+
+HinhThucDanhGiaFormSet = inlineformset_factory(
+    DeCuongHocPhan,
+    HinhThucDanhGia,
+    form=HinhThucDanhGiaForm,
+    fk_name='de_cuong_hoc_phan',
+    extra=1,
+    can_delete=True
+)

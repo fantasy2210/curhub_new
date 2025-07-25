@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+
+{% load static %}
+
+{% block title %}
+    {{ page_title|default:"Danh Sách Học Phần" }} - {{ block.super }}
+{% endblock title %}
+
+{% block header_title %}
+    {{ page_title|default:"DANH SÁCH HỌC PHẦN" }}
+{% endblock header_title %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card card-primary card-outline">
+                <div class="card-header">
+                    <h3 class="card-title">{{ page_title|default:"DANH SÁCH HỌC PHẦN" }}</h3>
+                    <div class="card-tools">
+                        <!-- This button was removed because it's contextually incorrect on this page -->
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- BỘ LỌC VÀ TÌM KIẾM -->
+                    <div class="card card-primary card-outline card-outline-tabs mb-3">
+                        <div class="card-header p-0 border-bottom-0">
+                            <ul class="nav nav-tabs" id="custom-tabs-four-tab" role="tablist">
+                                <li class="nav-item">
+                                    <a class="nav-link active" id="search-tab" data-toggle="pill" href="#search-tab-pane" role="tab" aria-controls="search-tab-pane" aria-selected="true">Tìm kiếm</a>
+                                </li>
+                                <li class="nav-item">
+                                    <a class="nav-link" id="filter-tab" data-toggle="pill" href="#filter-tab-pane" role="tab" aria-controls="filter-tab-pane" aria-selected="false">Bộ lọc</a>
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="card-body">
+                            <div class="tab-content" id="custom-tabs-four-tabContent">
+                                <div class="tab-pane fade show active" id="search-tab-pane" role="tabpanel">
+                                    <form method="get" action="{% url 'daotao:danh_sach_hoc_phan' %}" class="row g-3 align-items-center">
+                                        <div class="col-lg-10 col-md-12 mb-2">
+                                            <div class="input-group">
+                                                <div class="input-group-prepend">
+                                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                                </div>
+                                                <input type="text" name="q" class="form-control" placeholder="Tìm theo mã, tên học phần..." value="{{ query_search }}">
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-2 col-md-12 mb-2">
+                                            <button type="submit" class="btn btn-primary w-100">Tìm kiếm</button>
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="tab-pane fade" id="filter-tab-pane" role="tabpanel">
+                                    <form method="get" action="{% url 'daotao:danh_sach_hoc_phan' %}" class="row g-3 align-items-center">
+                                        <input type="hidden" name="q" value="{{ query_search }}">
+                                        <div class="col-lg-10 col-md-12 mb-2">
+                                            <select name="don_vi" class="form-control select2" data-placeholder="-- Lọc theo đơn vị quản lý gốc --" style="width: 100%;">
+                                                <option value="">-- Lọc theo đơn vị quản lý gốc --</option>
+                                                {% for don_vi in don_vi_list %}
+                                                    <option value="{{ don_vi.id }}" {% if don_vi_filter == don_vi.id|stringformat:"s" %}selected{% endif %}>{{ don_vi.ten_don_vi }}</option>
+                                                {% endfor %}
+                                            </select>
+                                        </div>
+                                        <div class="col-lg-2 col-md-12 mb-2">
+                                            <button type="submit" class="btn btn-primary w-100">Lọc</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                    {% if page_obj %}
+                    <table class="table table-bordered table-striped table-valign-middle">
+                        <thead class="thead-light">
+                            <tr>
+                                <th rowspan="2" class="text-center align-middle">TT</th>
+                                <th rowspan="2" class="text-center align-middle">Mã học phần</th>
+                                <th rowspan="2" class="text-center align-middle">Tên học phần</th>
+                                <th rowspan="2" class="text-center align-middle">Tổng số tín chỉ</th>
+                                <th colspan="2" class="text-center">Lý thuyết</th>
+                                <th colspan="2" class="text-center">Thực hành</th>
+                                <th rowspan="2" class="text-center align-middle">Giờ Tự học và giờ học khác</th>
+                                <th rowspan="2" class="text-center align-middle">Đơn vị quản lý</th>
+                                <th rowspan="2" class="text-center align-middle">Ghi chú</th>
+                                <th rowspan="2" class="text-center align-middle">Hành động</th>
+                            </tr>
+                            <tr>
+                                <th class="text-center">Tín chỉ</th>
+                                <th class="text-center">Số giờ</th>
+                                <th class="text-center">Tín chỉ</th>
+                                <th class="text-center">Số giờ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for hoc_phan in page_obj %}
+                            <tr>
+                                <td class="text-center">{{ forloop.counter0|add:page_obj.start_index }}</td>
+                                <td>{{ hoc_phan.ma_hoc_phan }}</td>
+                                <td>{{ hoc_phan.ten_hoc_phan }}</td>
+                                <td class="text-center">{{ hoc_phan.tong_so_tin_chi_goc|default:"0" }}</td>
+                                <td class="text-center">{{ hoc_phan.tin_chi_ly_thuyet_goc|default:"0" }}</td>
+                                <td class="text-center">{{ hoc_phan.so_gio_ly_thuyet_goc|default:"0" }}</td>
+                                <td class="text-center">{{ hoc_phan.tin_chi_thuc_hanh_goc|default:"0" }}</td>
+                                <td class="text-center">{{ hoc_phan.so_gio_thuc_hanh_goc|default:"0" }}</td>
+                                <td class="text-center">{{ hoc_phan.so_gio_tu_hoc_goc|default:"0" }}</td>
+                                <td>{{ hoc_phan.don_vi_quan_ly_goc.ten_don_vi|default:"N/A" }}</td>
+                                <td>{{ hoc_phan.ghi_chu_hoc_phan|default:"" }}</td>
+                                <td class="text-center">
+                                    <a href="{% url 'daotao:chi_tiet_hoc_phan' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-info btn-sm" title="Chi tiết">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{% url 'daotao:sua_hoc_phan' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-warning btn-sm" title="Sửa">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    <a href="{% url 'daotao:xoa_hoc_phan' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-danger btn-sm" title="Xóa">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <div class="alert alert-warning text-center m-3">
+                        <h4 class="alert-heading">Không tìm thấy dữ liệu!</h4>
+                        <p>Không có học phần nào phù hợp với điều kiện tìm kiếm của bạn.</p>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer clearfix">
+                    {% if page_obj.has_other_pages %}
+                        <ul class="pagination pagination-sm m-0 float-right">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item"><a class="page-link" href="?page=1&{{ request.GET.urlencode | cut:'page=' }}">« Đầu</a></li>
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode | cut:'page=' }}">‹ Trước</a></li>
+                            {% endif %}
+
+                            <li class="page-item active"><span class="page-link">{{ page_obj.number }}/{{ page_obj.paginator.num_pages }}</span></li>
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode | cut:'page=' }}">Sau ›</a></li>
+                                <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&{{ request.GET.urlencode | cut:'page=' }}">Cuối »</a></li>
+                            {% endif %}
+                        </ul>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+$(function () {
+    //Initialize Select2 Elements
+    $('.select2').select2({
+        theme: 'bootstrap4',
+        allowClear: true
+    });
+});
+</script>
+{% endblock scripts %}

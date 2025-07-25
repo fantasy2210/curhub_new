@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Cột thông tin chính của học phần -->
+        <div class="col-lg-8">
+            <div class="card card-primary card-outline">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <i class="fas fa-book-reader mr-1"></i>
+                        <strong>{{ hoc_phan.ma_hoc_phan }} - {{ hoc_phan.ten_hoc_phan }}</strong>
+                    </h3>
+                    <div class="card-tools">
+                        <a href="{% url 'daotao:sua_hoc_phan' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-sm btn-info" title="Sửa thông tin gốc">
+                            <i class="fas fa-edit"></i> Sửa
+                        </a>
+                        <a href="{% url 'daotao:danh_sach_de_cuong' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-sm btn-success" title="Quản lý các phiên bản đề cương">
+                            <i class="fas fa-file-alt"></i> Quản lý Đề cương
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <dl>
+                                <dt>Tên Tiếng Anh</dt>
+                                <dd>{{ hoc_phan.ten_tieng_anh|default_if_none:"Chưa có" }}</dd>
+
+                                <dt>Đơn vị quản lý</dt>
+                                <dd>{{ hoc_phan.don_vi_quan_ly_goc.ten_don_vi|default_if_none:"N/A" }}</dd>
+                                
+                                <dt>Học phần tiên quyết</dt>
+                                <dd>
+                                    {% for hp in hoc_phan.hoc_phan_tien_quyet.all %}
+                                        <a href="{% url 'daotao:chi_tiet_hoc_phan' hp.pk %}">{{ hp.ten_hoc_phan }}</a> ({{hp.ma_hoc_phan}}){% if not forloop.last %}, {% endif %}
+                                    {% empty %}
+                                        Không có
+                                    {% endfor %}
+                                </dd>
+
+                                <dt>Học phần song hành</dt>
+                                <dd>
+                                    {% for hp in hoc_phan.hoc_phan_song_hanh.all %}
+                                        <a href="{% url 'daotao:chi_tiet_hoc_phan' hp.pk %}">{{ hp.ten_hoc_phan }}</a> ({{hp.ma_hoc_phan}}){% if not forloop.last %}, {% endif %}
+                                    {% empty %}
+                                        Không có
+                                    {% endfor %}
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <dl>
+                                <dt>Tổng số tín chỉ</dt>
+                                <dd>{{ hoc_phan.tong_so_tin_chi_goc }}</dd>
+
+                                <dt>Phân bổ tín chỉ</dt>
+                                <dd>LT: {{ hoc_phan.tin_chi_ly_thuyet_goc }} - TH: {{ hoc_phan.tin_chi_thuc_hanh_goc }}</dd>
+
+                                <dt>Phân bổ giờ học</dt>
+                                <dd>
+                                    <ul class="list-unstyled">
+                                        <li>Lý thuyết: {{ hoc_phan.so_gio_ly_thuyet_goc|default_if_none:0 }} giờ</li>
+                                        <li>Thực hành: {{ hoc_phan.so_gio_thuc_hanh_goc|default_if_none:0 }} giờ</li>
+                                        <li>Tự học: {{ hoc_phan.so_gio_tu_hoc_goc|default_if_none:0 }} giờ</li>
+                                    </ul>
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+
+                    <hr>
+                    <strong><i class="fas fa-file-alt mr-1"></i> Mô tả học phần</strong>
+                    <p class="text-muted">
+                        {{ hoc_phan.mo_ta_hoc_phan|default_if_none:"Không có mô tả chi tiết."|safe }}
+                    </p>
+                </div>
+            </div>
+
+            <div class="card card-info card-outline card-tabs">
+                <div class="card-header p-0 pt-1 border-bottom-0">
+                    <ul class="nav nav-tabs" id="custom-tabs-three-tab" role="tablist">
+                        <li class="nav-item">
+                            <a class="nav-link active" id="tabs-de-cuong-tab" data-toggle="pill" href="#tabs-de-cuong" role="tab" aria-controls="tabs-de-cuong" aria-selected="true">
+                                <i class="fas fa-sitemap"></i> Các Đề cương hiện có
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" id="tabs-ctdt-tab" data-toggle="pill" href="#tabs-ctdt" role="tab" aria-controls="tabs-ctdt" aria-selected="false">
+                                <i class="fas fa-graduation-cap"></i> Có trong các CTĐT
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                <div class="card-body">
+                    <div class="tab-content" id="custom-tabs-three-tabContent">
+                        <div class="tab-pane fade show active" id="tabs-de-cuong" role="tabpanel" aria-labelledby="tabs-de-cuong-tab">
+                            {% if de_cuong_list %}
+                                <table class="table table-bordered table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Tên/Phiên bản Đề cương</th>
+                                            <th>Ngày ban hành</th>
+                                            <th>Trạng thái</th>
+                                            <th>Hành động</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for dc in de_cuong_list %}
+                                        <tr>
+                                            <td>{{ dc.ten_de_cuong_phien_ban }}</td>
+                                            <td>{{ dc.ngay_ban_hanh|date:"d/m/Y" }}</td>
+                                            <td>
+                                                {% if dc.la_phien_ban_hien_hanh %}
+                                                    <span class="badge badge-success">Hiện hành</span>
+                                                {% else %}
+                                                    <span class="badge badge-secondary">Cũ</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="#" class="btn btn-xs btn-primary">Xem</a>
+                                                <a href="{% url 'daotao:sua_de_cuong' dc.pk %}" class="btn btn-xs btn-info">Sửa</a>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}
+                                <p>Chưa có đề cương nào cho học phần này.</p>
+                            {% endif %}
+                        </div>
+                        <div class="tab-pane fade" id="tabs-ctdt" role="tabpanel" aria-labelledby="tabs-ctdt-tab">
+                            {% if ctdt_list %}
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Mã CTĐT</th>
+                                            <th>Tên Chương trình Đào tạo</th>
+                                            <th>Trạng thái</th>
+                                            <th>Học kỳ dự kiến</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for ctdt_item in ctdt_list %}
+                                        <tr>
+                                            <td>
+                                                <a href="{% url 'daotao:chi_tiet_ctdt' ctdt_item.chuong_trinh_dao_tao.pk %}">
+                                                    {{ ctdt_item.chuong_trinh_dao_tao.ma_nganh_ctdt }}
+                                                </a>
+                                            </td>
+                                            <td>{{ ctdt_item.chuong_trinh_dao_tao.ten_nganh_ctdt }}</td>
+                                            <td><span class="badge {{ ctdt_item.chuong_trinh_dao_tao.trang_thai|trang_thai_to_badge }}">{{ ctdt_item.chuong_trinh_dao_tao.get_trang_thai_display }}</span></td>
+                                            <td>{{ ctdt_item.hoc_ky_du_kien|default_if_none:"-" }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}
+                                <p>Học phần này chưa được thêm vào chương trình đào tạo nào.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cột thông tin bổ sung -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Thông tin khác</h3>
+                </div>
+                <div class="card-body">
+                    <dl>
+                        <dt>Là học phần tự chọn</dt>
+                        <dd>{% if hoc_phan.la_hoc_phan_tu_chon %}Có{% else %}Không{% endif %}</dd>
+
+                        <dt>Không tính điểm TB</dt>
+                        <dd>{% if hoc_phan.khong_tinh_diem_tb %}Có{% else %}Không{% endif %}</dd>
+
+                        <dt>Số tín chỉ ECTS</dt>
+                        <dd>{{ hoc_phan.so_tin_chi_ects|default_if_none:"N/A" }}</dd>
+                        
+                        <dt>ID Edusoft</dt>
+                        <dd>{{ hoc_phan.edusoft_id|default_if_none:"N/A" }}</dd>
+                    </dl>
+                </div>
+            </div>
+             <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Phân bổ giờ học chi tiết (gốc)</h3>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr>
+                                <td>Bài tập</td>
+                                <td>{{ hoc_phan.so_gio_bai_tap_goc|default_if_none:0 }} giờ</td>
+                            </tr>
+                            <tr>
+                                <td>Đồ án</td>
+                                <td>{{ hoc_phan.so_gio_do_an_goc|default_if_none:0 }} giờ</td>
+                            </tr>
+                            <tr>
+                                <td>Luận án</td>
+                                <td>{{ hoc_phan.so_gio_luan_an_goc|default_if_none:0 }} giờ</td>
+                            </tr>
+                            <tr>
+                                <td>Thực tập</td>
+                                <td>{{ hoc_phan.so_gio_thuc_tap_goc|default_if_none:0 }} giờ</td>
+                            </tr>
+                             <tr>
+                                <td>Bài tập lớn</td>
+                                <td>{{ hoc_phan.so_gio_bai_tap_lon_goc|default_if_none:0 }} giờ</td>
+                            </tr>
+                             <tr>
+                                <td>LMS</td>
+                                <td>{{ hoc_phan.so_gio_lms_goc|default_if_none:0 }} giờ</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

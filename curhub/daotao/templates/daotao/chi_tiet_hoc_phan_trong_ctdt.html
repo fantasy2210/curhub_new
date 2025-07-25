@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}CURHUB | Chi tiết Học phần trong CTĐT{% endblock %}
+
+{% block page_title %}Chi tiết Học phần trong Chương trình Đào tạo{% endblock %}
+
+{% block breadcrumb_items %}
+    <li class="breadcrumb-item"><a href="{% url 'daotao:danh_sach_ctdt' %}">Quản lý CTĐT</a></li>
+    <li class="breadcrumb-item"><a href="{% url 'daotao:chi_tiet_ctdt' pk_ctdt=chi_tiet_hp.chuong_trinh_dao_tao.pk %}">{{ chi_tiet_hp.chuong_trinh_dao_tao.ten_nganh_ctdt }}</a></li>
+    <li class="breadcrumb-item active">Chi tiết Học phần</li>
+{% endblock %}
+
+{% block content %}
+<div class="card card-primary card-outline">
+    <div class="card-header">
+        <h3 class="card-title">
+            <i class="fas fa-book-open mr-1"></i>
+            {{ chi_tiet_hp.hoc_phan.ten_hoc_phan }}
+        </h3>
+        <div class="card-tools">
+            <a href="{% url 'daotao:chi_tiet_ctdt' pk_ctdt=chi_tiet_hp.chuong_trinh_dao_tao.pk %}#hocphan-tab-pane" class="btn btn-tool"><i class="fas fa-arrow-left"></i> Quay lại CTĐT</a>
+        </div>
+    </div>
+    <div class="card-body">
+        <h4>Thông tin chung</h4>
+        <table class="table table-bordered">
+            <tr>
+                <th style="width: 25%;">Mã học phần</th>
+                <td>{{ chi_tiet_hp.hoc_phan.ma_hoc_phan }}</td>
+            </tr>
+            <tr>
+                <th>Tên học phần (Tiếng Việt)</th>
+                <td>{{ chi_tiet_hp.hoc_phan.ten_hoc_phan }}</td>
+            </tr>
+            <tr>
+                <th>Tên học phần (Tiếng Anh)</th>
+                <td>{{ chi_tiet_hp.hoc_phan.ten_hoc_phan_tieng_anh|default:"Chưa có" }}</td>
+            </tr>
+            <tr>
+                <th>Đơn vị quản lý gốc</th>
+                <td>{{ chi_tiet_hp.hoc_phan.don_vi_quan_ly_goc.ten_don_vi|default:"Chưa có" }}</td>
+            </tr>
+        </table>
+
+        <h4 class="mt-4">Thông tin trong CTĐT: {{ chi_tiet_hp.chuong_trinh_dao_tao.ten_nganh_ctdt }}</h4>
+        <table class="table table-bordered">
+            <tr>
+                <th style="width: 25%;">Học kỳ dự kiến</th>
+                <td>{{ chi_tiet_hp.hoc_ky_du_kien|default:"Chưa xác định" }}</td>
+            </tr>
+            <tr>
+                <th>Là học phần bắt buộc</th>
+                <td>{% if chi_tiet_hp.la_bat_buoc %}Có{% else %}Không{% endif %}</td>
+            </tr>
+            <tr>
+                <th>Tổng số tín chỉ (áp dụng)</th>
+                <td>{{ chi_tiet_hp.tong_so_tin_chi_apdung }}</td>
+            </tr>
+            <tr>
+                <th>Tín chỉ lý thuyết (áp dụng)</th>
+                <td>{{ chi_tiet_hp.tin_chi_ly_thuyet_apdung }}</td>
+            </tr>
+            <tr>
+                <th>Tín chỉ thực hành (áp dụng)</th>
+                <td>{{ chi_tiet_hp.tin_chi_thuc_hanh_apdung }}</td>
+            </tr>
+             <tr>
+                <th>Số giờ lý thuyết (áp dụng)</th>
+                <td>{{ chi_tiet_hp.so_gio_ly_thuyet_apdung }}</td>
+            </tr>
+            <tr>
+                <th>Số giờ thực hành (áp dụng)</th>
+                <td>{{ chi_tiet_hp.so_gio_thuc_hanh_apdung }}</td>
+            </tr>
+            <tr>
+                <th>Số giờ tự học (áp dụng)</th>
+                <td>{{ chi_tiet_hp.so_gio_tu_hoc_apdung }}</td>
+            </tr>
+            <tr>
+                <th>Ghi chú trong CTĐT</th>
+                <td>{{ chi_tiet_hp.ghi_chu_trong_ctdt|default:"Không có" }}</td>
+            </tr>
+        </table>
+    </div>
+</div>
+{% endblock %}

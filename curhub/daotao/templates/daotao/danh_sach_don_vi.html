@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ page_title }}</h3>
+                    <div class="card-tools">
+                        <a href="{% url 'daotao:them_don_vi' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Thêm mới
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="get" action="{% url 'daotao:danh_sach_don_vi' %}" class="mb-3">
+                        <div class="input-group">
+                            <input type="text" name="q" class="form-control" placeholder="Tìm kiếm theo mã hoặc tên đơn vị..." value="{{ query }}">
+                            <div class="input-group-append">
+                                <button class="btn btn-outline-secondary" type="submit">Tìm kiếm</button>
+                            </div>
+                        </div>
+                    </form>
+                    <table id="donvi_table" class="table table-bordered table-striped">
+                        <thead>
+                            <tr>
+                                <th>Mã đơn vị</th>
+                                <th>Tên đơn vị</th>
+                                <th>Đơn vị cha</th>
+                                <th>Hành động</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for don_vi in don_vi_list %}
+                            <tr>
+                                <td>{{ don_vi.ma_don_vi }}</td>
+                                <td>{{ don_vi.ten_don_vi }}</td>
+                                <td>{{ don_vi.don_vi_cha.ten_don_vi|default:"-" }}</td>
+                                <td>
+                                    <a href="{% url 'daotao:sua_don_vi' don_vi.pk %}" class="btn btn-sm btn-info">
+                                        <i class="fas fa-edit"></i> Sửa
+                                    </a>
+                                    <a href="{% url 'daotao:xoa_don_vi' don_vi.pk %}" class="btn btn-sm btn-danger">
+                                        <i class="fas fa-trash"></i> Xóa
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    $(function () {
+        $("#donvi_table").DataTable({
+            "responsive": true,
+            "lengthChange": false,
+            "autoWidth": false,
+            "buttons": ["copy", "csv", "excel", "pdf", "print", "colvis"]
+        }).buttons().container().appendTo('#donvi_table_wrapper .col-md-6:eq(0)');
+    });
+</script>
+{% endblock %}
