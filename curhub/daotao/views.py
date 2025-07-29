@@ -978,7 +978,7 @@ def them_chuan_dau_ra(request, pk_ctdt):
         return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)
 
     if request.method == 'POST':
-        form = ChuanDauRaForm(request.POST)
+        form = ChuanDauRaForm(request.POST, chuong_trinh_dao_tao=ctdt)
         if form.is_valid():
             cdr = form.save(commit=False)
             cdr.chuong_trinh_dao_tao = ctdt
@@ -989,9 +989,7 @@ def them_chuan_dau_ra(request, pk_ctdt):
         else:
             messages.error(request, "Có lỗi xảy ra khi thêm. Vui lòng kiểm tra lại các trường.")
     else:
-        form = ChuanDauRaForm()
-        # Filter the queryset for 'dap_ung_muc_tieu' to only show POs from the current CTDT
-        form.fields['dap_ung_muc_tieu'].queryset = MucTieuDaoTao.objects.filter(chuong_trinh_dao_tao=ctdt)
+        form = ChuanDauRaForm(chuong_trinh_dao_tao=ctdt)
 
     context = {
         'form': form,
@@ -1011,7 +1009,7 @@ def sua_chuan_dau_ra(request, pk_cdr):
         return redirect('daotao:chi_tiet_ctdt', pk_ctdt=ctdt.pk)
 
     if request.method == 'POST':
-        form = ChuanDauRaForm(request.POST, instance=cdr)
+        form = ChuanDauRaForm(request.POST, instance=cdr, chuong_trinh_dao_tao=ctdt)
         if form.is_valid():
             form.save()
             messages.success(request, "Đã cập nhật Chuẩn đầu ra thành công!")
@@ -1019,8 +1017,7 @@ def sua_chuan_dau_ra(request, pk_cdr):
         else:
             messages.error(request, "Có lỗi xảy ra khi cập nhật. Vui lòng kiểm tra lại các trường.")
     else:
-        form = ChuanDauRaForm(instance=cdr)
-        form.fields['dap_ung_muc_tieu'].queryset = MucTieuDaoTao.objects.filter(chuong_trinh_dao_tao=ctdt)
+        form = ChuanDauRaForm(instance=cdr, chuong_trinh_dao_tao=ctdt)
 
     context = {
         'form': form,

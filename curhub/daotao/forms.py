@@ -176,9 +176,50 @@ MucTieuDaoTaoFormSet = inlineformset_factory(
 )
 
 class ChuanDauRaForm(forms.ModelForm):
+    dap_ung_muc_tieu = forms.ModelMultipleChoiceField(
+        queryset=MucTieuDaoTao.objects.none(),  # Start with an empty queryset
+        widget=forms.CheckboxSelectMultiple,
+        required=False,
+        label="Đáp ứng Mục tiêu Đào tạo (PO)"
+    )
+
+    def __init__(self, *args, **kwargs):
+        # Pop the custom kwarg 'chuong_trinh_dao_tao' before calling super
+        chuong_trinh_dao_tao = kwargs.pop('chuong_trinh_dao_tao', None)
+        super().__init__(*args, **kwargs)
+        
+        # Store ctdt on the form instance if it was passed
+        self.chuong_trinh_dao_tao = chuong_trinh_dao_tao
+        
+        if self.chuong_trinh_dao_tao:
+            # Filter the queryset for the dap_ung_muc_tieu field
+            self.fields['dap_ung_muc_tieu'].queryset = MucTieuDaoTao.objects.filter(
+                chuong_trinh_dao_tao=self.chuong_trinh_dao_tao
+            )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        ma_cdr = cleaned_data.get('ma_cdr')
+
+        # Ensure we have the necessary data to perform validation
+        if ma_cdr and self.chuong_trinh_dao_tao:
+            # Check for uniqueness within the specific ChuongTrinhDaoTao
+            query = ChuanDauRa.objects.filter(
+                chuong_trinh_dao_tao=self.chuong_trinh_dao_tao,
+                ma_cdr=ma_cdr
+            )
+            # If we are updating an existing instance, exclude it from the check
+            if self.instance and self.instance.pk:
+                query = query.exclude(pk=self.instance.pk)
+            
+            if query.exists():
+                self.add_error('ma_cdr', f"Mã '{ma_cdr}' đã tồn tại trong chương trình đào tạo này.")
+        
+        return cleaned_data
+        
     class Meta:
         model = ChuanDauRa
-        fields = '__all__'
+        fields = ['ma_cdr', 'noi_dung', 'loai_cdr', 'dap_ung_muc_tieu']
         exclude = ('chuong_trinh_dao_tao',) # Exclude FK as it's set in view
 
 ChuanDauRaFormSet = inlineformset_factory(

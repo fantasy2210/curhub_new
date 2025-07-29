@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-(bqcz1-ws!x+=!juoc==-b4rpa_2x)l)zwx3)8%38zb$nqa*j_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['172.250.30.72', 'localhost','127.0.0.1' ]
 
 
 # Application definition
@@ -87,7 +87,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',    # Chỉ định Django sử dụng MySQL backend
         'NAME': 'curhub_db',                    # Tên database bạn đã tạo trong MySQL
         'USER': 'root',       # Username MySQL bạn đã tạo
-        'PASSWORD': '2569',   # Mật khẩu cho user MySQL đó
+        'PASSWORD': '',   # Mật khẩu cho user MySQL đó
         'HOST': 'localhost',                    # Địa chỉ của MySQL server (thường là 'localhost' hoặc '127.0.0.1' nếu chạy trên cùng máy)
         'PORT': '3306',                         # Port mặc định của MySQL (thường là 3306)
         'OPTIONS': {
