@@ -253,6 +253,14 @@ class ChuongTrinhDaoTao(models.Model):
         verbose_name = "Chương trình Đào tạo"
         verbose_name_plural = "Các Chương trình Đào tạo"
         ordering = ['ten_nganh_ctdt']
+        permissions = [
+            ("can_approve_ctdt", "Có thể phê duyệt Chương trình Đào tạo"),
+            ("can_reject_ctdt", "Có thể yêu cầu chỉnh sửa/từ chối CTĐT"),
+            ("can_submit_for_approval", "Có thể gửi duyệt CTĐT"),
+            ("can_create_new_version", "Có thể tạo phiên bản mới cho CTĐT"),
+            ("can_archive_ctdt", "Có thể lưu trữ một CTĐT cũ"),
+            ("can_manage_program_structure", "Có thể quản lý cấu trúc CTĐT (PO, PLO, học phần)"),
+        ]
 
     @property
     def so_luong_hoc_phan(self):

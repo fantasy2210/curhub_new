@@ -2,16 +2,17 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse, JsonResponse
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q, OuterRef, Exists
 from django.contrib import messages
+from django.utils import timezone
 from .forms import (
     NganhDaoTaoForm, ChuongTrinhDaoTaoModelForm, HocPhanLibModelForm,
     ChiTietHocPhanTrongCTDTModelForm, DonViDaoTaoForm, MucTieuDaoTaoFormSet,
     ChuanDauRaFormSet, UploadHocPhanCTDTForm, ChuanDauRaForm, MucTieuDaoTaoForm,
     DanhMucKienThucForm, DeCuongHocPhanForm, ChuanDauRaHocPhanFormSet,
-    NoiDungChiTietDeCuongFormSet, HinhThucDanhGiaFormSet
+    NoiDungChiTietDeCuongFormSet, HinhThucDanhGiaFormSet, DoiSanhCTDTForm
 )
 from .models import (
     NganhDaoTao, ChuongTrinhDaoTao, HocPhan, ChiTietHocPhanTrongCTDT,
@@ -40,6 +41,8 @@ def them_nganh_dao_tao(request):
     context = {'form': form}
     return render(request, 'daotao/them_nganh.html', context)
 
+@login_required
+@permission_required('daotao.add_chuongtrinhdaotao', raise_exception=True)
 def them_chuong_trinh_dao_tao(request):
     if request.method == 'POST':
         form = ChuongTrinhDaoTaoModelForm(request.POST)
@@ -57,6 +60,8 @@ def them_chuong_trinh_dao_tao(request):
     }
     return render(request, 'daotao/them_ctdt.html', context)
 
+@login_required
+@permission_required('daotao.view_chuongtrinhdaotao', raise_exception=True)
 def danh_sach_ctdt(request):
     chuong_trinh_list = ChuongTrinhDaoTao.objects.prefetch_related('hoc_phan_trong_chuong_trinh').order_by('-ngay_cap_nhat')
     query_search = request.GET.get('q', '')
@@ -84,6 +89,8 @@ def danh_sach_ctdt(request):
     }
     return render(request, 'daotao/danh_sach_ctdt.html', context)
 
+@login_required
+@permission_required('daotao.view_chuongtrinhdaotao', raise_exception=True)
 def chi_tiet_ctdt(request, pk_ctdt):
     chuong_trinh = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     hoc_phan_trong_ctdt = ChiTietHocPhanTrongCTDT.objects.filter(
@@ -114,6 +121,7 @@ def chi_tiet_ctdt(request, pk_ctdt):
     return render(request, 'daotao/chi_tiet_ctdt.html', context)
 
 @login_required
+@permission_required('daotao.change_chuongtrinhdaotao', raise_exception=True)
 def sua_ctdt(request, pk_ctdt):
     ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     if ctdt.trang_thai != 'DRAFT':
@@ -124,12 +132,42 @@ def sua_ctdt(request, pk_ctdt):
         po_formset = MucTieuDaoTaoFormSet(request.POST, instance=ctdt, prefix='po')
         plo_formset = ChuanDauRaFormSet(request.POST, instance=ctdt, prefix='plo')
         if form.is_valid() and po_formset.is_valid() and plo_formset.is_valid():
-            with transaction.atomic():
-                form.save()
-                po_formset.save()
-                plo_formset.save()
-            messages.success(request, "Đã cập nhật Chương trình Đào tạo và các mục liên quan thành công!")
-            return redirect('daotao:chi_tiet_ctdt', pk_ctdt=ctdt.id)
+            change_details = []
+            if form.changed_data:
+                for field_name in form.changed_data:
+                    old_value = form.initial.get(field_name, 'N/A')
+                    new_value = form.cleaned_data.get(field_name, 'N/A')
+                    field_label = form.fields[field_name].label or field_name
+                    change_details.append(f"- Thay đổi '{field_label}' từ '{old_value}' thành '{new_value}'")
+            
+            # You can add more detailed logging for formsets if needed
+            if po_formset.has_changed():
+                change_details.append("- Có thay đổi trong Mục tiêu Đào tạo (PO).")
+            if plo_formset.has_changed():
+                change_details.append("- Có thay đổi trong Chuẩn Đầu Ra (PLO).")
+
+            if not change_details:
+                messages.info(request, "Không có thay đổi nào được thực hiện.")
+                return redirect('daotao:chi_tiet_ctdt', pk_ctdt=ctdt.id)
+
+            try:
+                with transaction.atomic():
+                    updated_ctdt = form.save()
+                    po_formset.save()
+                    plo_formset.save()
+
+                    # Create a history log entry
+                    LichSuThayDoiCTDT.objects.create(
+                        chuong_trinh_dao_tao=updated_ctdt,
+                        nguoi_thuc_hien=request.user,
+                        hanh_dong="Cập nhật",
+                        chi_tiet_thay_doi="\n".join(change_details)
+                    )
+                messages.success(request, "Đã cập nhật Chương trình Đào tạo và các mục liên quan thành công!")
+                return redirect('daotao:chi_tiet_ctdt', pk_ctdt=updated_ctdt.id)
+            except Exception as e:
+                messages.error(request, f"Đã có lỗi xảy ra trong quá trình lưu: {e}")
+
         else:
             messages.error(request, "Có lỗi xảy ra khi cập nhật. Vui lòng kiểm tra lại các trường.")
     else:
@@ -150,6 +188,7 @@ def sua_ctdt(request, pk_ctdt):
     return render(request, 'daotao/sua_ctdt.html', context)
 
 @login_required
+@permission_required('daotao.delete_chuongtrinhdaotao', raise_exception=True)
 def xoa_ctdt(request, pk_ctdt):
     chuong_trinh_can_xoa = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     if request.method == 'POST':
@@ -162,6 +201,8 @@ def xoa_ctdt(request, pk_ctdt):
     }
     return render(request, 'daotao/xoa_ctdt_confirm.html', context)
 
+@login_required
+@permission_required('daotao.view_hocphan', raise_exception=True)
 def danh_sach_hoc_phan(request):
     hoc_phan_list = HocPhan.objects.select_related('don_vi_quan_ly_goc').order_by('ma_hoc_phan')
     
@@ -249,6 +290,8 @@ def search_hoc_phan_api(request):
     })
 
 
+@login_required
+@permission_required('daotao.view_hocphan', raise_exception=True)
 def chi_tiet_hoc_phan(request, pk_hoc_phan):
     hoc_phan = get_object_or_404(HocPhan, pk=pk_hoc_phan)
     de_cuong_list = DeCuongHocPhan.objects.filter(hoc_phan=hoc_phan).order_by('-ngay_ban_hanh')
@@ -262,6 +305,7 @@ def chi_tiet_hoc_phan(request, pk_hoc_phan):
     return render(request, 'daotao/chi_tiet_hoc_phan.html', context)
 
 @login_required
+@permission_required('daotao.can_manage_program_structure', raise_exception=True)
 def them_hoc_phan_hang_loat(request, pk_ctdt):
     ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     if request.method == 'GET' and request.GET.get('format') == 'datatables':
@@ -272,26 +316,40 @@ def them_hoc_phan_hang_loat(request, pk_ctdt):
             search_ma_hp = request.GET.get('search_ma_hp', '')
             search_ten_hp = request.GET.get('search_ten_hp', '')
             search_don_vi_ql = request.GET.get('search_don_vi_ql', '')
-            queryset = HocPhan.objects.select_related('don_vi_quan_ly_goc').order_by('ma_hoc_phan')
+
+            # Subquery to check if the HocPhan already exists in the current CTDT
+            existing_hp_subquery = ChiTietHocPhanTrongCTDT.objects.filter(
+                chuong_trinh_dao_tao=ctdt,
+                hoc_phan=OuterRef('pk')
+            )
+
+            # Base queryset with optimizations
+            queryset = HocPhan.objects.select_related('don_vi_quan_ly_goc').annotate(
+                is_disabled=Exists(existing_hp_subquery)
+            ).order_by('ma_hoc_phan')
+
             total_records = queryset.count()
+
+            # Apply search filters
             if search_ma_hp:
                 queryset = queryset.filter(ma_hoc_phan__icontains=search_ma_hp)
             if search_ten_hp:
                 queryset = queryset.filter(ten_hoc_phan__icontains=search_ten_hp)
             if search_don_vi_ql:
                 queryset = queryset.filter(don_vi_quan_ly_goc__pk=search_don_vi_ql)
+
             filtered_records = queryset.count()
+
+            # Apply pagination
             paginated_queryset = queryset[start:start + length]
-            existing_hp_pks_set = set(ChiTietHocPhanTrongCTDT.objects.filter(
-                chuong_trinh_dao_tao=ctdt
-            ).values_list('hoc_phan__pk', flat=True))
+
             data = []
             for hp in paginated_queryset:
                 try:
-                    is_disabled = hp.pk in existing_hp_pks_set
+                    # 'is_disabled' is now an attribute from the annotation
                     checkbox_html = f'''
                         <input type="checkbox" name="selected_hoc_phan" value="{hp.pk}" class="hoc-phan-checkbox"
-                        {'disabled' if is_disabled else ''} title="{'Học phần này đã có trong CTĐT' if is_disabled else ''}">
+                        {'disabled' if hp.is_disabled else ''} title="{'Học phần này đã có trong CTĐT' if hp.is_disabled else ''}">
                     '''
                     hoc_ky_input_html = f'<input type="number" name="hoc_ky" class="form-control form-control-sm" style="width: 60px;">'
                     don_vi_name = hp.don_vi_quan_ly_goc.ten_don_vi if hp.don_vi_quan_ly_goc else "N/A"
@@ -316,6 +374,7 @@ def them_hoc_phan_hang_loat(request, pk_ctdt):
                         "Lỗi",
                         error_message
                     ])
+
             response_data = {
                 "draw": draw,
                 "recordsTotal": total_records,
@@ -392,6 +451,7 @@ def them_hoc_phan_hang_loat(request, pk_ctdt):
     return render(request, 'daotao/them_hoc_phan_hang_loat.html', context)
 
 @login_required
+@permission_required('daotao.add_chitiethocphantrongctdt', raise_exception=True)
 def upload_hoc_phan_ctdt(request, pk_ctdt):
     ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     if ctdt.trang_thai != 'DRAFT':
@@ -500,6 +560,7 @@ def upload_hoc_phan_ctdt(request, pk_ctdt):
     return render(request, 'daotao/upload_hoc_phan_ctdt.html', {'form': form, 'ctdt': ctdt})
 
 @login_required
+@permission_required('daotao.add_muctieudaotao', raise_exception=True)
 def them_muc_tieu_dao_tao(request, pk_ctdt):
     ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     if ctdt.trang_thai != 'DRAFT':
@@ -527,22 +588,178 @@ def them_muc_tieu_dao_tao(request, pk_ctdt):
 # --- PLACEHOLDER FUNCTIONS START ---
 
 @login_required
+@permission_required('daotao.can_submit_for_approval', raise_exception=True)
 def gui_duyet_ctdt(request, pk_ctdt):
-    return HttpResponse(f"Chức năng gửi duyệt cho CTĐT {pk_ctdt} chưa được triển khai.")
+    if request.method != 'POST':
+        messages.error(request, "Yêu cầu không hợp lệ.")
+        return redirect('daotao:danh_sach_ctdt')
+    
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    if ctdt.trang_thai == 'DRAFT':
+        ctdt.trang_thai = 'PENDING_APPROVAL'
+        ctdt.save()
+        messages.success(request, f"Đã gửi duyệt chương trình '{ctdt.ten_nganh_ctdt}'.")
+    else:
+        messages.warning(request, "Chỉ có thể gửi duyệt các chương trình ở trạng thái 'Bản nháp'.")
+        
+    return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)
 
 @login_required
-def xu_ly_duyet_ctdt(request, pk_ctdt, action):
-    return HttpResponse(f"Chức năng xử lý duyệt ({action}) cho CTĐT {pk_ctdt} chưa được triển khai.")
+@require_http_methods(["POST"])
+def xu_ly_duyet_ctdt(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    action = request.POST.get('action')
+
+    if ctdt.trang_thai != 'PENDING_APPROVAL':
+        messages.warning(request, "Chỉ có thể xử lý các chương trình đang chờ duyệt.")
+        return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)
+
+    if action == 'approve' and request.user.has_perm('daotao.can_approve_ctdt'):
+        with transaction.atomic():
+            ctdt.trang_thai = 'APPROVED'
+            ctdt.ghi_chu_ctdt = f"Được phê duyệt bởi {request.user.username} vào lúc {timezone.now().strftime('%H:%M:%S %d/%m/%Y')}."
+            ctdt.save()
+
+            LichSuThayDoiCTDT.objects.create(
+                chuong_trinh_dao_tao=ctdt,
+                nguoi_thuc_hien=request.user,
+                hanh_dong="Phê duyệt",
+                chi_tiet_thay_doi="Chương trình đào tạo đã được phê duyệt."
+            )
+            
+            if ctdt.phien_ban_goc:
+                original_ctdt = ctdt.phien_ban_goc
+                original_ctdt.trang_thai = 'ARCHIVED'
+                original_ctdt.save()
+                messages.info(request, f"Phiên bản gốc '{original_ctdt.ten_nganh_ctdt}' đã được lưu trữ.")
+
+        messages.success(request, f"Đã phê duyệt chương trình '{ctdt.ten_nganh_ctdt}'.")
+
+    elif action == 'reject' and request.user.has_perm('daotao.can_reject_ctdt'):
+        ly_do = request.POST.get('ly_do', '').strip()
+        if not ly_do:
+            messages.error(request, "Cần phải cung cấp lý do khi yêu cầu chỉnh sửa.")
+            return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)
+        
+        with transaction.atomic():
+            ctdt.trang_thai = 'DRAFT'
+            ctdt.ghi_chu_ctdt = f"Yêu cầu chỉnh sửa bởi {request.user.username} vào lúc {timezone.now().strftime('%H:%M:%S %d/%m/%Y')}.\nLý do: {ly_do}"
+            ctdt.save()
+
+            LichSuThayDoiCTDT.objects.create(
+                chuong_trinh_dao_tao=ctdt,
+                nguoi_thuc_hien=request.user,
+                hanh_dong="Yêu cầu chỉnh sửa",
+                chi_tiet_thay_doi=f"Lý do: {ly_do}"
+            )
+
+        messages.warning(request, f"Đã gửi yêu cầu chỉnh sửa cho chương trình '{ctdt.ten_nganh_ctdt}'.")
+    
+    else:
+        messages.error(request, "Hành động không hợp lệ hoặc bạn không có quyền thực hiện.")
+
+    return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)
 
 @login_required
+@permission_required('daotao.add_chuongtrinhdaotao', raise_exception=True)
 def tao_phien_ban_moi_ctdt(request, pk_ctdt):
-    return HttpResponse(f"Chức năng tạo phiên bản mới cho CTĐT {pk_ctdt} chưa được triển khai.")
+    """
+    Tạo một phiên bản mới (clone) từ một CTĐT đã có.
+    Bao gồm việc sao chép CTĐT, các PO, PLO, và các chi tiết học phần liên quan.
+    """
+    if request.method != 'POST':
+        messages.error(request, "Yêu cầu không hợp lệ.")
+        return redirect('daotao:danh_sach_ctdt')
+
+    original_ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    
+    try:
+        with transaction.atomic():
+            # 1. Clone the ChuongTrinhDaoTao object
+            new_ctdt = ChuongTrinhDaoTao.objects.get(pk=pk_ctdt)
+            new_ctdt.pk = None
+            new_ctdt.id = None
+            new_ctdt.trang_thai = 'DRAFT'
+            new_ctdt.phien_ban_goc = original_ctdt
+            # Simple versioning: append a timestamp or a count
+            version_count = ChuongTrinhDaoTao.objects.filter(phien_ban_goc=original_ctdt).count()
+            new_ctdt.version = f"{original_ctdt.version}.{version_count + 1}"
+            new_ctdt.ten_nganh_ctdt = f"{original_ctdt.ten_nganh_ctdt} (Phiên bản {new_ctdt.version})"
+            new_ctdt.ma_nganh_ctdt = f"{original_ctdt.ma_nganh_ctdt}-v{new_ctdt.version}"
+            new_ctdt.ly_do_thay_doi = f"Phiên bản mới tạo từ CTĐT '{original_ctdt.ten_nganh_ctdt}'"
+            new_ctdt.save()
+
+            # 2. Clone related MucTieuDaoTao (POs)
+            old_pos = original_ctdt.muc_tieu_dao_tao_ctdt.all()
+            po_map = {} # old_pk -> new_instance
+            for po in old_pos:
+                new_po = MucTieuDaoTao(
+                    chuong_trinh_dao_tao=new_ctdt,
+                    ma_muc_tieu=po.ma_muc_tieu,
+                    noi_dung=po.noi_dung
+                )
+                new_po.save()
+                po_map[po.pk] = new_po
+
+            # 3. Clone related ChuanDauRa (PLOs) and their M2M with new POs
+            old_plos = original_ctdt.chuan_dau_ra_ctdt.all()
+            for plo in old_plos:
+                old_related_pos = plo.dap_ung_muc_tieu.all()
+                
+                new_plo = ChuanDauRa(
+                    chuong_trinh_dao_tao=new_ctdt,
+                    ma_cdr=plo.ma_cdr,
+                    noi_dung=plo.noi_dung,
+                    loai_cdr=plo.loai_cdr
+                )
+                new_plo.save()
+                
+                # Map old POs to new POs for the M2M relationship
+                new_related_pos_pks = [po_map[old_po.pk].pk for old_po in old_related_pos if old_po.pk in po_map]
+                if new_related_pos_pks:
+                    new_plo.dap_ung_muc_tieu.set(new_related_pos_pks)
+
+            # 4. Clone ChiTietHocPhanTrongCTDT (course details)
+            old_details = original_ctdt.chitiethocphantrongctdt_set.all()
+            detail_map = {} # old_pk -> new_instance
+            for detail in old_details:
+                new_detail = ChiTietHocPhanTrongCTDT.objects.get(pk=detail.pk)
+                new_detail.pk = None
+                new_detail.id = None
+                new_detail.chuong_trinh_dao_tao = new_ctdt
+                new_detail.save() # Save to get a PK for M2M relationships
+                detail_map[detail.pk] = new_detail
+
+            # 5. Re-establish M2M relationships within ChiTietHocPhanTrongCTDT (prerequisites, etc.)
+            for old_detail_pk, new_detail in detail_map.items():
+                original_detail = ChiTietHocPhanTrongCTDT.objects.get(pk=old_detail_pk)
+                
+                # Prerequisites
+                prereq_pks = original_detail.hoc_phan_tien_quyet.values_list('pk', flat=True)
+                new_prereq_pks = [detail_map[pk].pk for pk in prereq_pks if pk in detail_map]
+                if new_prereq_pks:
+                    new_detail.hoc_phan_tien_quyet.set(new_prereq_pks)
+
+                # Concurrent courses
+                concurrent_pks = original_detail.hoc_phan_song_hanh.values_list('pk', flat=True)
+                new_concurrent_pks = [detail_map[pk].pk for pk in concurrent_pks if pk in detail_map]
+                if new_concurrent_pks:
+                    new_detail.hoc_phan_song_hanh.set(new_concurrent_pks)
+
+            messages.success(request, f"Đã tạo phiên bản mới '{new_ctdt.ten_nganh_ctdt}' thành công.")
+            return redirect('daotao:chi_tiet_ctdt', pk_ctdt=new_ctdt.pk)
+
+    except Exception as e:
+        messages.error(request, f"Đã có lỗi xảy ra trong quá trình tạo phiên bản mới: {e}")
+        return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)
 
 @login_required
+@permission_required('daotao.can_archive_ctdt', raise_exception=True)
 def luu_tru_ctdt(request, pk_ctdt):
     return HttpResponse(f"Chức năng lưu trữ CTĐT {pk_ctdt} chưa được triển khai.")
 
 @login_required
+@permission_required('daotao.change_hocphan', raise_exception=True)
 def sua_hoc_phan(request, pk_hoc_phan):
     hoc_phan = get_object_or_404(HocPhan, pk=pk_hoc_phan)
     if request.method == 'POST':
@@ -563,6 +780,7 @@ def sua_hoc_phan(request, pk_hoc_phan):
     return render(request, 'daotao/sua_hoc_phan.html', context)
 
 @login_required
+@permission_required('daotao.delete_hocphan', raise_exception=True)
 def xoa_hoc_phan(request, pk_hoc_phan):
     hoc_phan_can_xoa = get_object_or_404(HocPhan, pk=pk_hoc_phan)
     if request.method == 'POST':
@@ -588,6 +806,7 @@ def them_hoc_phan_vao_ctdt(request, pk_ctdt):
     return HttpResponse(f"Chức năng thêm học phần vào ctdt {pk_ctdt} chưa được triển khai.")
 
 @login_required
+@permission_required('daotao.view_chitiethocphantrongctdt', raise_exception=True)
 def chi_tiet_hoc_phan_trong_ctdt(request, pk_chi_tiet_hp):
     chi_tiet_hp = get_object_or_404(ChiTietHocPhanTrongCTDT.objects.select_related(
         'hoc_phan', 
@@ -602,6 +821,7 @@ def chi_tiet_hoc_phan_trong_ctdt(request, pk_chi_tiet_hp):
     return render(request, 'daotao/chi_tiet_hoc_phan_trong_ctdt.html', context)
 
 @login_required
+@permission_required('daotao.can_manage_program_structure', raise_exception=True)
 def sua_chi_tiet_hp_trong_ctdt(request, pk_chi_tiet_hp):
     chi_tiet_hp = get_object_or_404(ChiTietHocPhanTrongCTDT, pk=pk_chi_tiet_hp)
     ctdt = chi_tiet_hp.chuong_trinh_dao_tao
@@ -630,6 +850,7 @@ def sua_chi_tiet_hp_trong_ctdt(request, pk_chi_tiet_hp):
     return render(request, 'daotao/sua_chi_tiet_hp_trong_ctdt.html', context)
 
 @login_required
+@permission_required('daotao.change_chitiethocphantrongctdt', raise_exception=True)
 def sua_hoc_phan_ctdt(request, pk_chi_tiet_hp):
     chi_tiet = get_object_or_404(ChiTietHocPhanTrongCTDT, pk=pk_chi_tiet_hp)
     ctdt = chi_tiet.chuong_trinh_dao_tao
@@ -657,6 +878,7 @@ def sua_hoc_phan_ctdt(request, pk_chi_tiet_hp):
     }
     return render(request, 'daotao/sua_hoc_phan_ctdt.html', context)
 @login_required
+@permission_required('daotao.delete_chitiethocphantrongctdt', raise_exception=True)
 def xoa_chi_tiet_hp_trong_ctdt(request, pk_chi_tiet_hp):
     chi_tiet = get_object_or_404(ChiTietHocPhanTrongCTDT, pk=pk_chi_tiet_hp)
     ctdt = chi_tiet.chuong_trinh_dao_tao
@@ -679,6 +901,7 @@ def xoa_chi_tiet_hp_trong_ctdt(request, pk_chi_tiet_hp):
     return render(request, 'daotao/xoa_chi_tiet_hp_trong_ctdt_confirm.html', context)
 
 @login_required
+@permission_required('daotao.delete_chitiethocphantrongctdt', raise_exception=True)
 def xoa_hoc_phan_ctdt(request, pk_chi_tiet_hp):
     chi_tiet = get_object_or_404(ChiTietHocPhanTrongCTDT, pk=pk_chi_tiet_hp)
     ctdt = chi_tiet.chuong_trinh_dao_tao
@@ -747,6 +970,7 @@ def xoa_don_vi(request, pk_don_vi):
     return HttpResponse(f"Chức năng xóa đơn vị {pk_don_vi} chưa được triển khai.")
 
 @login_required
+@permission_required('daotao.add_chuandaura', raise_exception=True)
 def them_chuan_dau_ra(request, pk_ctdt):
     ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     if ctdt.trang_thai != 'DRAFT':
@@ -777,6 +1001,7 @@ def them_chuan_dau_ra(request, pk_ctdt):
     return render(request, 'daotao/them_chuan_dau_ra.html', context)
 
 @login_required
+@permission_required('daotao.change_chuandaura', raise_exception=True)
 def sua_chuan_dau_ra(request, pk_cdr):
     cdr = get_object_or_404(ChuanDauRa, pk=pk_cdr)
     ctdt = cdr.chuong_trinh_dao_tao
@@ -806,10 +1031,12 @@ def sua_chuan_dau_ra(request, pk_cdr):
     return render(request, 'daotao/sua_chuan_dau_ra.html', context)
 
 @login_required
+@permission_required('daotao.delete_chuandaura', raise_exception=True)
 def xoa_chuan_dau_ra(request, pk_cdr):
     return HttpResponse(f"Chức năng xóa chuẩn đầu ra {pk_cdr} chưa được triển khai.")
 
 @login_required
+@permission_required('daotao.change_muctieudaotao', raise_exception=True)
 def sua_muc_tieu_dao_tao(request, pk_po):
     muc_tieu = get_object_or_404(MucTieuDaoTao, pk=pk_po)
     ctdt = muc_tieu.chuong_trinh_dao_tao
@@ -838,6 +1065,7 @@ def sua_muc_tieu_dao_tao(request, pk_po):
     return render(request, 'daotao/sua_muc_tieu_dao_tao.html', context)
 
 @login_required
+@permission_required('daotao.delete_muctieudaotao', raise_exception=True)
 def xoa_muc_tieu_dao_tao(request, pk_po):
     muc_tieu = get_object_or_404(MucTieuDaoTao, pk=pk_po)
     ctdt = muc_tieu.chuong_trinh_dao_tao
@@ -870,6 +1098,7 @@ def get_don_vi_dao_tao_options(request):
 
 #region Đơn vị Đào tạo
 @login_required
+@permission_required('daotao.view_donvidaotao', raise_exception=True)
 def danh_sach_don_vi(request):
     query = request.GET.get('q', '')
     don_vi_list = DonViDaoTao.objects.all()
@@ -885,6 +1114,7 @@ def danh_sach_don_vi(request):
     return render(request, 'daotao/danh_sach_don_vi.html', context)
 
 @login_required
+@permission_required('daotao.add_donvidaotao', raise_exception=True)
 def them_don_vi(request):
     if request.method == 'POST':
         form = DonViDaoTaoForm(request.POST)
@@ -903,6 +1133,7 @@ def them_don_vi(request):
     return render(request, 'daotao/don_vi_form.html', context)
 
 @login_required
+@permission_required('daotao.change_donvidaotao', raise_exception=True)
 def sua_don_vi(request, pk):
     don_vi = get_object_or_404(DonViDaoTao, pk=pk)
     if request.method == 'POST':
@@ -922,6 +1153,7 @@ def sua_don_vi(request, pk):
     return render(request, 'daotao/don_vi_form.html', context)
 
 @login_required
+@permission_required('daotao.delete_donvidaotao', raise_exception=True)
 def xoa_don_vi(request, pk):
     don_vi = get_object_or_404(DonViDaoTao, pk=pk)
     if request.method == 'POST':
@@ -938,6 +1170,7 @@ def xoa_don_vi(request, pk):
 
 # Danh Muc Kien Thuc
 @login_required
+@permission_required('daotao.view_danhmuckienthuc', raise_exception=True)
 def danh_sach_danh_muc_kien_thuc(request):
     danh_muc_list = DanhMucKienThuc.objects.all()
     context = {
@@ -947,6 +1180,7 @@ def danh_sach_danh_muc_kien_thuc(request):
     return render(request, 'daotao/danh_sach_danh_muc_kien_thuc.html', context)
 
 @login_required
+@permission_required('daotao.add_danhmuckienthuc', raise_exception=True)
 def them_danh_muc_kien_thuc(request):
     if request.method == 'POST':
         form = DanhMucKienThucForm(request.POST)
@@ -963,6 +1197,7 @@ def them_danh_muc_kien_thuc(request):
     return render(request, 'daotao/them_danh_muc_kien_thuc.html', context)
 
 @login_required
+@permission_required('daotao.change_danhmuckienthuc', raise_exception=True)
 def sua_danh_muc_kien_thuc(request, pk):
     danh_muc = get_object_or_404(DanhMucKienThuc, pk=pk)
     if request.method == 'POST':
@@ -980,6 +1215,7 @@ def sua_danh_muc_kien_thuc(request, pk):
     return render(request, 'daotao/them_danh_muc_kien_thuc.html', context)
 
 @login_required
+@permission_required('daotao.delete_danhmuckienthuc', raise_exception=True)
 def xoa_danh_muc_kien_thuc(request, pk):
     danh_muc = get_object_or_404(DanhMucKienThuc, pk=pk)
     if request.method == 'POST':
@@ -996,6 +1232,7 @@ def xoa_danh_muc_kien_thuc(request, pk):
 
 #region DeCuongHocPhan
 @login_required
+@permission_required('daotao.view_decuonghocphan', raise_exception=True)
 def danh_sach_de_cuong(request, pk_hoc_phan):
     hoc_phan = get_object_or_404(HocPhan, pk=pk_hoc_phan)
     de_cuong_list = DeCuongHocPhan.objects.filter(hoc_phan=hoc_phan).order_by('-ngay_ban_hanh')
@@ -1007,6 +1244,7 @@ def danh_sach_de_cuong(request, pk_hoc_phan):
     return render(request, 'daotao/danh_sach_de_cuong.html', context)
 
 @login_required
+@permission_required('daotao.add_decuonghocphan', raise_exception=True)
 def them_de_cuong(request, pk_hoc_phan):
     hoc_phan = get_object_or_404(HocPhan, pk=pk_hoc_phan)
     if request.method == 'POST':
@@ -1051,6 +1289,7 @@ def them_de_cuong(request, pk_hoc_phan):
     return render(request, 'daotao/de_cuong_form.html', context)
 
 @login_required
+@permission_required('daotao.change_decuonghocphan', raise_exception=True)
 def sua_de_cuong(request, pk_de_cuong):
     de_cuong = get_object_or_404(DeCuongHocPhan, pk=pk_de_cuong)
     hoc_phan = de_cuong.hoc_phan
@@ -1087,6 +1326,7 @@ def sua_de_cuong(request, pk_de_cuong):
     return render(request, 'daotao/de_cuong_form.html', context)
 
 @login_required
+@permission_required('daotao.delete_decuonghocphan', raise_exception=True)
 def xoa_de_cuong(request, pk_de_cuong):
     de_cuong = get_object_or_404(DeCuongHocPhan, pk=pk_de_cuong)
     hoc_phan_pk = de_cuong.hoc_phan.pk
@@ -1104,6 +1344,7 @@ def xoa_de_cuong(request, pk_de_cuong):
     return render(request, 'daotao/confirm_delete.html', context)
 
 @login_required
+@permission_required('daotao.delete_decuonghocphan', raise_exception=True)
 def xoa_de_cuong(request, pk_de_cuong):
     de_cuong = get_object_or_404(DeCuongHocPhan, pk=pk_de_cuong)
     hoc_phan_pk = de_cuong.hoc_phan.pk
@@ -1117,3 +1358,120 @@ def xoa_de_cuong(request, pk_de_cuong):
     }
     return render(request, 'daotao/de_cuong_confirm_delete.html', context)
 #endregion
+
+def doi_sanh_ctdt(request):
+    if request.method == 'POST':
+        form = DoiSanhCTDTForm(request.POST)
+        if form.is_valid():
+            ctdt1 = form.cleaned_data['ctdt1']
+            ctdt2 = form.cleaned_data['ctdt2']
+
+            # 1. Compare general info
+            info_fields = [
+                'ten_nganh_ctdt', 'ma_nganh_ctdt', 'ten_tieng_anh', 'trinh_do_dao_tao',
+                'hinh_thuc_dao_tao', 'so_tin_chi_yeu_cau', 'thoi_gian_dao_tao',
+                'van_bang_tot_nghiep', 'don_vi_quan_ly'
+            ]
+            info_comparison = {}
+            for field in info_fields:
+                val1 = getattr(ctdt1, field)
+                val2 = getattr(ctdt2, field)
+                info_comparison[ctdt1._meta.get_field(field).verbose_name] = {
+                    'value1': val1,
+                    'value2': val2,
+                    'is_different': val1 != val2
+                }
+
+            # 2. Compare courses (HocPhan)
+            hp1_qs = ChiTietHocPhanTrongCTDT.objects.filter(chuong_trinh_dao_tao=ctdt1).select_related('hoc_phan')
+            hp2_qs = ChiTietHocPhanTrongCTDT.objects.filter(chuong_trinh_dao_tao=ctdt2).select_related('hoc_phan')
+            
+            hp1_dict = {hp.hoc_phan.ma_hoc_phan: hp for hp in hp1_qs}
+            hp2_dict = {hp.hoc_phan.ma_hoc_phan: hp for hp in hp2_qs}
+
+            common_hp_codes = set(hp1_dict.keys()) & set(hp2_dict.keys())
+            unique_to_1_codes = set(hp1_dict.keys()) - set(hp2_dict.keys())
+            unique_to_2_codes = set(hp2_dict.keys()) - set(hp1_dict.keys())
+
+            common_hps_comparison = []
+            for code in sorted(list(common_hp_codes)):
+                detail1 = hp1_dict[code]
+                detail2 = hp2_dict[code]
+                is_diff = (detail1.la_bat_buoc != detail2.la_bat_buoc or
+                           detail1.hoc_ky_du_kien != detail2.hoc_ky_du_kien or
+                           detail1.get_tong_tin_chi_apdung() != detail2.get_tong_tin_chi_apdung())
+                common_hps_comparison.append({
+                    'ma_hp': code,
+                    'ten_hp': detail1.hoc_phan.ten_hoc_phan,
+                    'detail1': detail1,
+                    'detail2': detail2,
+                    'is_different': is_diff
+                })
+
+            unique_to_1 = [hp1_dict[code] for code in sorted(list(unique_to_1_codes))]
+            unique_to_2 = [hp2_dict[code] for code in sorted(list(unique_to_2_codes))]
+
+            # 3. Compare Program Objectives (MucTieuDaoTao)
+            po1_qs = MucTieuDaoTao.objects.filter(chuong_trinh_dao_tao=ctdt1)
+            po2_qs = MucTieuDaoTao.objects.filter(chuong_trinh_dao_tao=ctdt2)
+            po1_dict = {po.ma_muc_tieu: po for po in po1_qs}
+            po2_dict = {po.ma_muc_tieu: po for po in po2_qs}
+            common_po_codes = set(po1_dict.keys()) & set(po2_dict.keys())
+            unique_po_1_codes = set(po1_dict.keys()) - set(po2_dict.keys())
+            unique_po_2_codes = set(po2_dict.keys()) - set(po1_dict.keys())
+            
+            common_pos_comparison = []
+            for code in sorted(list(common_po_codes)):
+                po1 = po1_dict[code]
+                po2 = po2_dict[code]
+                common_pos_comparison.append({
+                    'ma': code,
+                    'noi_dung1': po1.noi_dung,
+                    'noi_dung2': po2.noi_dung,
+                    'is_different': po1.noi_dung != po2.noi_dung
+                })
+
+            # 4. Compare Program Learning Outcomes (ChuanDauRa)
+            plo1_qs = ChuanDauRa.objects.filter(chuong_trinh_dao_tao=ctdt1)
+            plo2_qs = ChuanDauRa.objects.filter(chuong_trinh_dao_tao=ctdt2)
+            plo1_dict = {plo.ma_cdr: plo for plo in plo1_qs}
+            plo2_dict = {plo.ma_cdr: plo for plo in plo2_qs}
+            common_plo_codes = set(plo1_dict.keys()) & set(plo2_dict.keys())
+            unique_plo_1_codes = set(plo1_dict.keys()) - set(plo2_dict.keys())
+            unique_plo_2_codes = set(plo2_dict.keys()) - set(plo1_dict.keys())
+
+            common_plos_comparison = []
+            for code in sorted(list(common_plo_codes)):
+                plo1 = plo1_dict[code]
+                plo2 = plo2_dict[code]
+                common_plos_comparison.append({
+                    'ma': code,
+                    'noi_dung1': plo1.noi_dung,
+                    'noi_dung2': plo2.noi_dung,
+                    'is_different': plo1.noi_dung != plo2.noi_dung
+                })
+
+            context = {
+                'ctdt1': ctdt1,
+                'ctdt2': ctdt2,
+                'info_comparison': info_comparison,
+                'common_hps': common_hps_comparison,
+                'unique_to_1': unique_to_1,
+                'unique_to_2': unique_to_2,
+                'common_pos': common_pos_comparison,
+                'unique_po_1': [po1_dict[code] for code in sorted(list(unique_po_1_codes))],
+                'unique_po_2': [po2_dict[code] for code in sorted(list(unique_po_2_codes))],
+                'common_plos': common_plos_comparison,
+                'unique_plo_1': [plo1_dict[code] for code in sorted(list(unique_plo_1_codes))],
+                'unique_plo_2': [plo2_dict[code] for code in sorted(list(unique_plo_2_codes))],
+                'page_title': f'Đối sánh: {ctdt1.ten_nganh_ctdt} vs {ctdt2.ten_nganh_ctdt}'
+            }
+            return render(request, 'daotao/ket_qua_doi_sanh_ctdt.html', context)
+    else:
+        form = DoiSanhCTDTForm()
+
+    context = {
+        'form': form,
+        'page_title': 'Đối sánh Chương trình Đào tạo'
+    }
+    return render(request, 'daotao/doi_sanh_ctdt.html', context)

@@ -296,6 +296,30 @@ NoiDungChiTietDeCuongFormSet = inlineformset_factory(
     can_delete=True
 )
 
+class DoiSanhCTDTForm(forms.Form):
+    ctdt1 = forms.ModelChoiceField(
+        queryset=ChuongTrinhDaoTao.objects.all().order_by('ten_nganh_ctdt'),
+        label="Chọn Chương trình Đào tạo thứ nhất",
+        widget=forms.Select(attrs={'class': 'form-control select2'})
+    )
+    ctdt2 = forms.ModelChoiceField(
+        queryset=ChuongTrinhDaoTao.objects.all().order_by('ten_nganh_ctdt'),
+        label="Chọn Chương trình Đào tạo thứ hai",
+        widget=forms.Select(attrs={'class': 'form-control select2'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Row(
+                Column('ctdt1', css_class='form-group col-md-6 mb-0'),
+                Column('ctdt2', css_class='form-group col-md-6 mb-0'),
+            ),
+            Submit('submit', 'Đối sánh', css_class='btn btn-primary mt-3')
+        )
+
 class HinhThucDanhGiaForm(forms.ModelForm):
     class Meta:
         model = HinhThucDanhGia

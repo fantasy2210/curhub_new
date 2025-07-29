@@ -29,14 +29,83 @@
                     {% else %} fa-times-circle {% endif %} mr-1"></i>
                 {{ ctdt.get_trang_thai_display }}
             </span>
+            
+            {% if perms.daotao.change_chuongtrinhdaotao %}
             <a href="{% url 'daotao:sua_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-warning btn-sm mr-1"><i class="fas fa-edit mr-1"></i>Cập nhật chương trình</a>
+            {% endif %}
             <a href="{% url 'daotao:danh_sach_ctdt' %}" class="btn btn-tool"><i class="fas fa-arrow-left"></i></a>
         </div>
     </div>
     <div class="card-body">
         <p class="text-muted">Mã: {{ ctdt.ma_nganh_ctdt }} | Phiên bản: {{ ctdt.version }}</p>
-        <!-- Khu vực hiển thị các nút hành động (dựa trên trạng thái) -->
-        <!-- Đặt code các nút "Gửi duyệt", "Phê duyệt", "Tạo phiên bản mới" bạn đã tạo vào đây -->
+        
+        <!-- Workflow Action Buttons -->
+        <div class="my-3">
+            {% if ctdt.trang_thai == 'DRAFT' and perms.daotao.can_submit_for_approval %}
+            <form action="{% url 'daotao:gui_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn gửi duyệt chương trình này không?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane mr-1"></i> Gửi duyệt
+                </button>
+            </form>
+            {% endif %}
+
+            {% if ctdt.trang_thai == 'PENDING_APPROVAL' %}
+                {% if perms.daotao.can_approve_ctdt %}
+                <form action="{% url 'daotao:xu_ly_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT chương trình này không?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve">
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check mr-1"></i> Phê duyệt
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if perms.daotao.can_reject_ctdt %}
+                <!-- Button to trigger modal -->
+                <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#rejectModal">
+                    <i class="fas fa-times mr-1"></i> Yêu cầu chỉnh sửa
+                </button>
+
+                <!-- Modal -->
+                <div class="modal fade" id="rejectModal" tabindex="-1" role="dialog" aria-labelledby="rejectModalLabel" aria-hidden="true">
+                    <div class="modal-dialog" role="document">
+                        <div class="modal-content">
+                            <form action="{% url 'daotao:xu_ly_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="reject">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="rejectModalLabel">Yêu cầu chỉnh sửa Chương trình Đào tạo</h5>
+                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                        <span aria-hidden="true">&times;</span>
+                                    </button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="form-group">
+                                        <label for="rejection_reason">Lý do yêu cầu chỉnh sửa:</label>
+                                        <textarea class="form-control" id="rejection_reason" name="ly_do" rows="4" required></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                                    <button type="submit" class="btn btn-primary">Gửi yêu cầu</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+
+            {% if ctdt.trang_thai == 'APPROVED' and perms.daotao.can_create_new_version %}
+            <form action="{% url 'daotao:tao_phien_ban_moi_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn tạo một phiên bản mới từ chương trình đào tạo này không?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-info">
+                    <i class="fas fa-copy mr-1"></i> Tạo phiên bản mới
+                </button>
+            </form>
+            {% endif %}
+        </div>
         <hr>
 
         <ul class="nav nav-tabs" id="ctdtTab" role="tablist">
@@ -84,6 +153,7 @@
             </div>
             <div class="tab-pane fade p-3" id="hocphan-tab-pane" role="tabpanel">
                 <div class="mb-3 text-right">
+                    {% if perms.daotao.add_chitiethocphantrongctdt %}
                     <a href="{% url 'daotao:them_hoc_phan_vao_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-primary btn-sm mr-2">
                         <i class="fas fa-plus mr-1"></i> Thêm Học phần
                     </a>
@@ -93,6 +163,7 @@
                     <a href="{% url 'daotao:upload_hoc_phan_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-info btn-sm">
                         <i class="fas fa-upload mr-1"></i> Tải lên danh sách Học phần (Excel/CSV)
                     </a>
+                    {% endif %}
                 </div>
                 {% if ctdt.trang_thai == 'DRAFT' %}
                 <div class="alert alert-info alert-dismissible fade show" role="alert">
@@ -150,10 +221,16 @@
                                     <td class="editable" data-name="so_gio_tu_hoc_apdung" data-type="number">{{ hp_ctdt.so_gio_tu_hoc_apdung|default:"-" }}</td>
                                     <td class="editable" data-name="ghi_chu_trong_ctdt" data-type="text">{{ hp_ctdt.ghi_chu_trong_ctdt|default:"" }}</td>
                                     <td>
+                                        {% if perms.daotao.view_chitiethocphantrongctdt %}
                                         <a href="{% url 'daotao:chi_tiet_hoc_phan_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-info btn-sm">Xem</a>
+                                        {% endif %}
                                         {% if ctdt.trang_thai == 'DRAFT' %}
-                                        <a href="{% url 'daotao:sua_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-warning btn-sm">Sửa</a>
-                                        <a href="{% url 'daotao:xoa_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-danger btn-sm">Xóa</a>
+                                            {% if perms.daotao.can_manage_program_structure %}
+                                            <a href="{% url 'daotao:sua_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-warning btn-sm">Sửa</a>
+                                            {% endif %}
+                                            {% if perms.daotao.delete_chitiethocphantrongctdt %}
+                                            <a href="{% url 'daotao:xoa_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-danger btn-sm">Xóa</a>
+                                            {% endif %}
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -181,9 +258,11 @@
             </div>
             <div class="tab-pane fade p-3" id="cdr-tab-pane" role="tabpanel">
                 <div class="mb-3 text-right">
+                    {% if perms.daotao.add_chuandaura %}
                     <a href="{% url 'daotao:them_chuan_dau_ra' pk_ctdt=ctdt.pk %}" class="btn btn-success btn-sm">
                         <i class="fas fa-plus-circle mr-1"></i> Thêm mới Chuẩn đầu ra
                     </a>
+                    {% endif %}
                 </div>
                 <h5>Danh sách chuẩn đầu ra (PLO)</h5>
                 <div class="table-responsive">
@@ -216,8 +295,12 @@
                                     </td>
                                     {% endfor %}
                                     <td>
+                                        {% if perms.daotao.change_chuandaura %}
                                         <a href="{% url 'daotao:sua_chuan_dau_ra' pk_cdr=plo.pk %}" class="btn btn-warning btn-sm">Sửa</a>
+                                        {% endif %}
+                                        {% if perms.daotao.delete_chuandaura %}
                                         <a href="{% url 'daotao:xoa_chuan_dau_ra' pk_cdr=plo.pk %}" class="btn btn-danger btn-sm">Xóa</a>
+                                        {% endif %}
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -231,9 +314,11 @@
             </div>
             <div class="tab-pane fade p-3" id="po-tab-pane" role="tabpanel">
                 <div class="mb-3 text-right">
+                    {% if perms.daotao.add_muctieudaotao %}
                     <a href="{% url 'daotao:them_muc_tieu_dao_tao' pk_ctdt=ctdt.pk %}" class="btn btn-success btn-sm">
                         <i class="fas fa-plus-circle mr-1"></i> Thêm mới Mục tiêu Đào tạo
                     </a>
+                    {% endif %}
                 </div>
                 <h5>Danh sách Mục tiêu Đào tạo (PO)</h5>
                 <div class="table-responsive">
@@ -256,8 +341,12 @@
                                 <td>{{ po.ngay_tao|date:"H:i:s d/m/Y" }}</td>
                                 <td>{{ po.ngay_cap_nhat|date:"H:i:s d/m/Y" }}</td>
                                 <td>
+                                    {% if perms.daotao.change_muctieudaotao %}
                                     <a href="{% url 'daotao:sua_muc_tieu_dao_tao' pk_po=po.pk %}" class="btn btn-warning btn-sm">Sửa</a>
+                                    {% endif %}
+                                    {% if perms.daotao.delete_muctieudaotao %}
                                     <a href="{% url 'daotao:xoa_muc_tieu_dao_tao' pk_po=po.pk %}" class="btn btn-danger btn-sm">Xóa</a>
+                                    {% endif %}
                                 </td>
                             </tr>
                             {% endfor %}

@@ -1,5 +1,6 @@
 {% load static %}
 {% load active_link_tags %}
+{% load navigation_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -53,40 +54,7 @@
       <!-- Sidebar Menu -->
       <nav class="mt-2">
         <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-          <!-- Add icons to the links using the .nav-icon class
-               with font-awesome or any other icon font library -->
-          <li class="nav-item">
-            <a href="{% url 'daotao:danh_sach_ctdt' %}" class="nav-link {% if request.path|startswith_filter:'/ctdt/' %}active{% endif %}">
-              <i class="nav-icon fas fa-graduation-cap"></i>
-              <p>
-                Quản lý CTĐT
-              </p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="{% url 'daotao:danh_sach_hoc_phan' %}" class="nav-link {% if request.path|startswith_filter:'/hoc-phan/' %}active{% endif %}">
-              <i class="nav-icon fas fa-book"></i>
-              <p>
-                Quản lý Học phần
-              </p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="{% url 'daotao:danh_sach_don_vi' %}" class="nav-link {% if request.path|startswith_filter:'/don-vi/' %}active{% endif %}">
-              <i class="nav-icon fas fa-university"></i>
-              <p>
-                Quản lý Đơn vị
-              </p>
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="{% url 'daotao:danh_sach_danh_muc_kien_thuc' %}" class="nav-link {% if request.path|startswith_filter:'/danh-muc-kien-thuc/' %}active{% endif %}">
-              <i class="nav-icon fas fa-sitemap"></i>
-              <p>
-                Danh mục Kiến thức
-              </p>
-            </a>
-          </li>
+          {% render_sidebar_menu %}
         </ul>
       </nav>
       <!-- /.sidebar-menu -->

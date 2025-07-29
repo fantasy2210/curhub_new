@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ page_title }}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">{{ page_title }}</h3>
+                    <div class="card-tools">
+                        <a href="{% url 'daotao:doi_sanh_ctdt' %}" class="btn btn-secondary">Chọn CTĐT khác</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- General Information -->
+    <div class="card mt-3">
+        <div class="card-header bg-primary text-white">
+            <h4 class="card-title mb-0">Thông tin chung</h4>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-bordered table-striped">
+                <thead class="thead-light">
+                    <tr>
+                        <th style="width: 20%;">Thuộc tính</th>
+                        <th style="width: 40%;">{{ ctdt1.ten_nganh_ctdt }} ({{ ctdt1.version }})</th>
+                        <th style="width: 40%;">{{ ctdt2.ten_nganh_ctdt }} ({{ ctdt2.version }})</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for key, value in info_comparison.items %}
+                    <tr class="{% if value.is_different %}table-warning font-weight-bold{% endif %}">
+                        <td><strong>{{ key }}</strong></td>
+                        <td>{{ value.value1|default_if_none:"-" }}</td>
+                        <td>{{ value.value2|default_if_none:"-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Program Objectives (POs) -->
+    <div class="card mt-4">
+        <div class="card-header bg-secondary text-white">
+            <h4 class="card-title mb-0">Mục tiêu Đào tạo (PO)</h4>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th style="width: 10%;">Mã PO</th>
+                        <th style="width: 45%;">Nội dung ({{ ctdt1.version }})</th>
+                        <th style="width: 45%;">Nội dung ({{ ctdt2.version }})</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for po in common_pos %}
+                    <tr class="{% if po.is_different %}table-warning{% endif %}">
+                        <td>{{ po.ma }}</td>
+                        <td>{{ po.noi_dung1|linebreaksbr }}</td>
+                        <td>{{ po.noi_dung2|linebreaksbr }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center">Không có mục tiêu chung.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5 class="card-title mb-0">PO chỉ có trong {{ ctdt1.version }} ({{ unique_po_1|length }})</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for po in unique_po_1 %}<li class="list-group-item">{{ po.ma_muc_tieu }}: {{ po.noi_dung }}</li>{% empty %}<li class="list-group-item text-center">Không có.</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5 class="card-title mb-0">PO chỉ có trong {{ ctdt2.version }} ({{ unique_po_2|length }})</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for po in unique_po_2 %}<li class="list-group-item">{{ po.ma_muc_tieu }}: {{ po.noi_dung }}</li>{% empty %}<li class="list-group-item text-center">Không có.</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Program Learning Outcomes (PLOs) -->
+    <div class="card mt-4">
+        <div class="card-header bg-dark text-white">
+            <h4 class="card-title mb-0">Chuẩn Đầu ra (PLO)</h4>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th style="width: 10%;">Mã PLO</th>
+                        <th style="width: 45%;">Nội dung ({{ ctdt1.version }})</th>
+                        <th style="width: 45%;">Nội dung ({{ ctdt2.version }})</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plo in common_plos %}
+                    <tr class="{% if plo.is_different %}table-warning{% endif %}">
+                        <td>{{ plo.ma }}</td>
+                        <td>{{ plo.noi_dung1|linebreaksbr }}</td>
+                        <td>{{ plo.noi_dung2|linebreaksbr }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="3" class="text-center">Không có chuẩn đầu ra chung.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5 class="card-title mb-0">PLO chỉ có trong {{ ctdt1.version }} ({{ unique_plo_1|length }})</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for plo in unique_plo_1 %}<li class="list-group-item">{{ plo.ma_cdr }}: {{ plo.noi_dung }}</li>{% empty %}<li class="list-group-item text-center">Không có.</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header"><h5 class="card-title mb-0">PLO chỉ có trong {{ ctdt2.version }} ({{ unique_plo_2|length }})</h5></div>
+                <ul class="list-group list-group-flush">
+                    {% for plo in unique_plo_2 %}<li class="list-group-item">{{ plo.ma_cdr }}: {{ plo.noi_dung }}</li>{% empty %}<li class="list-group-item text-center">Không có.</li>{% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Courses -->
+    <div class="card mt-4">
+        <div class="card-header bg-success text-white">
+            <h4 class="card-title mb-0">Các học phần chung ({{ common_hps|length }})</h4>
+        </div>
+        <div class="card-body p-0">
+            <table class="table table-bordered table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th>Mã HP</th>
+                        <th>Tên học phần</th>
+                        <th>Thông tin ({{ ctdt1.version }})</th>
+                        <th>Thông tin ({{ ctdt2.version }})</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for hp in common_hps %}
+                    <tr class="{% if hp.is_different %}table-warning{% endif %}">
+                        <td>{{ hp.ma_hp }}</td>
+                        <td>{{ hp.ten_hp }}</td>
+                        <td>
+                            TC: {{ hp.detail1.get_tong_tin_chi_apdung }}<br>
+                            HK: {{ hp.detail1.hoc_ky_du_kien|default_if_none:"-" }}<br>
+                            Bắt buộc: {% if hp.detail1.la_bat_buoc %}Có{% else %}Không{% endif %}
+                        </td>
+                        <td>
+                            TC: {{ hp.detail2.get_tong_tin_chi_apdung }}<br>
+                            HK: {{ hp.detail2.hoc_ky_du_kien|default_if_none:"-" }}<br>
+                            Bắt buộc: {% if hp.detail2.la_bat_buoc %}Có{% else %}Không{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">Không có học phần chung.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h4 class="card-title mb-0">HP chỉ có trong {{ ctdt1.version }} ({{ unique_to_1|length }})</h4>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-bordered">
+                        <tbody>
+                            {% for hp in unique_to_1 %}
+                            <tr>
+                                <td>{{ hp.hoc_phan.ma_hoc_phan }} - {{ hp.hoc_phan.ten_hoc_phan }} ({{ hp.get_tong_tin_chi_apdung }} TC)</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td class="text-center">Không có.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="card-title mb-0">HP chỉ có trong {{ ctdt2.version }} ({{ unique_to_2|length }})</h4>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-bordered">
+                        <tbody>
+                            {% for hp in unique_to_2 %}
+                            <tr>
+                                <td>{{ hp.hoc_phan.ma_hoc_phan }} - {{ hp.hoc_phan.ten_hoc_phan }} ({{ hp.get_tong_tin_chi_apdung }} TC)</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td class="text-center">Không có.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% comment %} templates/partials/_sidebar_menu.html {% endcomment %}
+{% for item in menu_items %}
+    <li class="nav-item">
+        <a href="{% url item.url %}" class="nav-link">
+            <i class="nav-icon {{ item.icon }}"></i>
+            <p>{{ item.name }}</p>
+        </a>
+    </li>
+{% endfor %}

@@ -17,12 +17,14 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic.base import RedirectView
 from django.conf import settings # Import settings
 from django.conf.urls.static import static # Import static
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path('daotao/', include('daotao.urls', namespace='daotao')),
+    path('daotao', RedirectView.as_view(url='/daotao/', permanent=True)),
     path('accounts/', include('django.contrib.auth.urls')),
 ]
 
