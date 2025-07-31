@@ -99,33 +99,77 @@ class HocPhanLibModelForm(forms.ModelForm):
         fields = '__all__'
 
 class ChiTietHocPhanTrongCTDTModelForm(forms.ModelForm):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        instance = kwargs.get('instance')
-        if instance and instance.chuong_trinh_dao_tao:
-            # Limit choices to other courses in the same CTDT
-            valid_choices = ChiTietHocPhanTrongCTDT.objects.filter(
-                chuong_trinh_dao_tao=instance.chuong_trinh_dao_tao
-            ).exclude(pk=instance.pk)
-            
-            self.fields['hoc_phan_tien_quyet'].queryset = valid_choices
-            self.fields['hoc_phan_song_hanh'].queryset = valid_choices
-            
-            # Pre-select current relations
-            tien_quyet_pks = instance.hoc_phan_tien_quyet.values_list('pk', flat=True)
-            song_hanh_pks = instance.hoc_phan_song_hanh.values_list('pk', flat=True)
-            
-            self.initial['hoc_phan_tien_quyet'] = list(tien_quyet_pks)
-            self.initial['hoc_phan_song_hanh'] = list(song_hanh_pks)
-
     class Meta:
         model = ChiTietHocPhanTrongCTDT
         fields = '__all__'
-        exclude = ('chuong_trinh_dao_tao', 'hoc_phan')
+        exclude = ('chuong_trinh_dao_tao',)
         widgets = {
-            'hoc_phan_tien_quyet': forms.SelectMultiple(attrs={'class': 'select2'}),
-            'hoc_phan_song_hanh': forms.SelectMultiple(attrs={'class': 'select2'}),
+            # Use standard widgets; they will be replaced/enhanced in __init__
+            'hoc_phan_tien_quyet': forms.SelectMultiple(attrs={'class': 'form-control'}),
+            'hoc_phan_song_hanh': forms.SelectMultiple(attrs={'class': 'form-control'}),
+            'danh_muc_kien_thuc': forms.Select(attrs={'class': 'form-control select2'}),
+            'khoi_kien_thuc': forms.Select(attrs={'class': 'form-control select2'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        # The ctdt instance is passed from the view
+        ctdt = kwargs.pop('ctdt', None)
+        # Allow passing a custom queryset for the 'hoc_phan' field
+        hoc_phan_qs = kwargs.pop('hoc_phan_queryset', None)
+        super().__init__(*args, **kwargs)
+        instance = kwargs.get('instance')
+
+        # --- AJAX for 'hoc_phan' field (main course selection) ---
+        # Use the provided queryset if available, otherwise determine it based on the instance
+        if hoc_phan_qs is not None:
+            final_hoc_phan_queryset = hoc_phan_qs
+        else:
+            final_hoc_phan_queryset = HocPhan.objects.none()
+            if instance and instance.pk and instance.hoc_phan:
+                final_hoc_phan_queryset = HocPhan.objects.filter(pk=instance.hoc_phan.pk)
+
+        self.fields['hoc_phan'] = forms.ModelChoiceField(
+            queryset=final_hoc_phan_queryset,
+            widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_hoc_phan'})
+        )
+        if instance and instance.pk:
+            self.fields['hoc_phan'].disabled = True
+
+        # --- AJAX for 'hoc_phan_tien_quyet' and 'hoc_phan_song_hanh' fields ---
+        # The queryset should contain all possible choices for the dropdowns.
+        possible_choices_qs = ChiTietHocPhanTrongCTDT.objects.none()
+        if ctdt:
+            possible_choices_qs = ChiTietHocPhanTrongCTDT.objects.filter(chuong_trinh_dao_tao=ctdt)
+            # If editing, exclude the current instance from being a prerequisite/concurrent of itself
+            if instance and instance.pk:
+                possible_choices_qs = possible_choices_qs.exclude(pk=instance.pk)
+
+        tien_quyet_queryset = possible_choices_qs
+        song_hanh_queryset = possible_choices_qs
+
+        # If editing, we still need to set the initial selected values for the form to render them.
+        # The queryset for the field must contain these initial values.
+        if instance and instance.pk:
+            # Combine the possible choices with the already selected ones to ensure they are in the queryset for validation
+            tien_quyet_queryset = (possible_choices_qs | instance.hoc_phan_tien_quyet.all()).distinct()
+            song_hanh_queryset = (possible_choices_qs | instance.hoc_phan_song_hanh.all()).distinct()
+
+        # Use a specific class to target these fields with AJAX-powered Select2
+        widget_attrs = {
+            'class': 'form-control select2-ajax-ctdt',
+            'data-ctdt-pk': ctdt.pk if ctdt else ''
+        }
+
+        self.fields['hoc_phan_tien_quyet'] = forms.ModelMultipleChoiceField(
+            queryset=tien_quyet_queryset,
+            widget=forms.SelectMultiple(attrs=widget_attrs),
+            required=False
+        )
+        self.fields['hoc_phan_song_hanh'] = forms.ModelMultipleChoiceField(
+            queryset=song_hanh_queryset,
+            widget=forms.SelectMultiple(attrs=widget_attrs),
+            required=False
+        )
 
 class DonViDaoTaoForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
@@ -164,68 +208,51 @@ class DonViDaoTaoForm(forms.ModelForm):
 class MucTieuDaoTaoForm(forms.ModelForm):
     class Meta:
         model = MucTieuDaoTao
-        fields = '__all__'
-        exclude = ('chuong_trinh_dao_tao',) # Exclude FK as it's set in view
-
-MucTieuDaoTaoFormSet = inlineformset_factory(
-    ChuongTrinhDaoTao,
-    MucTieuDaoTao,
-    form=MucTieuDaoTaoForm,
-    extra=1,
-    can_delete=True
-)
+        fields = ['ma_muc_tieu', 'noi_dung']
+        widgets = {
+            'noi_dung': forms.Textarea(attrs={'rows': 4}),
+        }
 
 class ChuanDauRaForm(forms.ModelForm):
     dap_ung_muc_tieu = forms.ModelMultipleChoiceField(
-        queryset=MucTieuDaoTao.objects.none(),  # Start with an empty queryset
+        queryset=MucTieuDaoTao.objects.none(),
         widget=forms.CheckboxSelectMultiple,
         required=False,
         label="Đáp ứng Mục tiêu Đào tạo (PO)"
     )
 
-    def __init__(self, *args, **kwargs):
-        # Pop the custom kwarg 'chuong_trinh_dao_tao' before calling super
-        chuong_trinh_dao_tao = kwargs.pop('chuong_trinh_dao_tao', None)
-        super().__init__(*args, **kwargs)
-        
-        # Store ctdt on the form instance if it was passed
-        self.chuong_trinh_dao_tao = chuong_trinh_dao_tao
-        
-        if self.chuong_trinh_dao_tao:
-            # Filter the queryset for the dap_ung_muc_tieu field
-            self.fields['dap_ung_muc_tieu'].queryset = MucTieuDaoTao.objects.filter(
-                chuong_trinh_dao_tao=self.chuong_trinh_dao_tao
-            )
-
-    def clean(self):
-        cleaned_data = super().clean()
-        ma_cdr = cleaned_data.get('ma_cdr')
-
-        # Ensure we have the necessary data to perform validation
-        if ma_cdr and self.chuong_trinh_dao_tao:
-            # Check for uniqueness within the specific ChuongTrinhDaoTao
-            query = ChuanDauRa.objects.filter(
-                chuong_trinh_dao_tao=self.chuong_trinh_dao_tao,
-                ma_cdr=ma_cdr
-            )
-            # If we are updating an existing instance, exclude it from the check
-            if self.instance and self.instance.pk:
-                query = query.exclude(pk=self.instance.pk)
-            
-            if query.exists():
-                self.add_error('ma_cdr', f"Mã '{ma_cdr}' đã tồn tại trong chương trình đào tạo này.")
-        
-        return cleaned_data
-        
     class Meta:
         model = ChuanDauRa
         fields = ['ma_cdr', 'noi_dung', 'loai_cdr', 'dap_ung_muc_tieu']
-        exclude = ('chuong_trinh_dao_tao',) # Exclude FK as it's set in view
+        widgets = {
+            'noi_dung': forms.Textarea(attrs={'rows': 4}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        ctdt = kwargs.pop('ctdt', None)
+        super().__init__(*args, **kwargs)
+        if ctdt:
+            self.fields['dap_ung_muc_tieu'].queryset = MucTieuDaoTao.objects.filter(chuong_trinh_dao_tao=ctdt)
+
+    def clean_ma_cdr(self):
+        # This validation is now handled in the view to provide a more specific error message
+        # based on the instance and program.
+        return self.cleaned_data.get('ma_cdr')
+
+MucTieuDaoTaoFormSet = inlineformset_factory(
+    ChuongTrinhDaoTao,
+    MucTieuDaoTao,
+    form=MucTieuDaoTaoForm,
+    fk_name='chuong_trinh_dao_tao',
+    extra=1,
+    can_delete=True
+)
 
 ChuanDauRaFormSet = inlineformset_factory(
     ChuongTrinhDaoTao,
     ChuanDauRa,
     form=ChuanDauRaForm,
+    fk_name='chuong_trinh_dao_tao',
     extra=1,
     can_delete=True
 )

@@ -23,6 +23,17 @@ def sum_attribute(value, arg):
     Usage: {{ my_list|sum_attribute:'my_attribute' }}
     """
     try:
-        return sum(getattr(obj, arg) for obj in value)
+        # Filter out None values before summing
+        return sum(getattr(obj, arg) or 0 for obj in value)
     except (AttributeError, TypeError):
         return 0
+
+@register.filter(name='get_item')
+def get_item(dictionary, key):
+    """
+    Returns the value of a dictionary key.
+    Usage: {{ my_dict|get_item:my_key }}
+    """
+    if isinstance(dictionary, dict):
+        return dictionary.get(key)
+    return None

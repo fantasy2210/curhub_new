@@ -10,6 +10,52 @@
 {% endblock header_title %}
 
 {% block content %}
+    <div class="card card-info card-outline">
+        <div class="card-header">
+            <h3 class="card-title">
+                <a data-toggle="collapse" href="#instructionsCollapse" role="button" aria-expanded="false" aria-controls="instructionsCollapse" class="text-dark">
+                    <i class="fas fa-info-circle"></i> Hướng dẫn <i class="fas fa-chevron-down fa-xs ml-1"></i>
+                </a>
+            </h3>
+        </div>
+        <div class="collapse" id="instructionsCollapse">
+            <div class="card-body">
+                <p>Trang này cho phép bạn thêm hàng loạt học phần vào chương trình đào tạo một cách nhanh chóng. Vui lòng làm theo các bước sau:</p>
+                <ol>
+                    <li><strong>Thiết lập giá trị mặc định (Tùy chọn):</strong>
+                        <ul>
+                            <li><strong>Học kỳ dự kiến (mặc định):</strong> Nhập một số nguyên (ví dụ: 1, 2, 3) để gán học kỳ cho tất cả các học phần được chọn. Bạn có thể ghi đè giá trị này cho từng học phần ở cột cuối cùng trong bảng.</li>
+                            <li><strong>Là bắt buộc (mặc định):</strong> Chọn "Có" hoặc "Không" để đặt trạng thái bắt buộc cho tất cả các học phần được chọn.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Lọc và Tìm kiếm học phần:</strong>
+                        <ul>
+                            <li>Sử dụng các bộ lọc "Lọc theo Mã HP", "Lọc theo Tên HP", hoặc "Lọc theo Đơn vị QL" để thu hẹp danh sách học phần.</li>
+                            <li>Bảng sẽ tự động cập nhật khi bạn nhập hoặc thay đổi lựa chọn.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Chọn học phần:</strong>
+                        <ul>
+                            <li>Đánh dấu vào ô checkbox ở đầu mỗi hàng để chọn học phần tương ứng.</li>
+                            <li>Sử dụng checkbox ở tiêu đề bảng để chọn hoặc bỏ chọn tất cả các học phần đang được hiển thị.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Ghi đè Học kỳ cho từng học phần (Tùy chọn):</strong>
+                        <ul>
+                            <li>Tại cột "Học kỳ" của mỗi học phần, bạn có thể nhập một số để chỉ định học kỳ riêng cho học phần đó. Giá trị này sẽ được ưu tiên hơn giá trị mặc định đã thiết lập ở Bước 1.</li>
+                        </ul>
+                    </li>
+                    <li><strong>Thêm vào Chương trình đào tạo:</strong>
+                        <ul>
+                            <li>Sau khi đã chọn xong các học phần và thiết lập học kỳ, nhấn nút <strong>"Thêm Học Phần Đã Chọn"</strong> ở cuối trang để lưu lại.</li>
+                        </ul>
+                    </li>
+                </ol>
+                <p class="font-weight-bold text-danger">Lưu ý: Các học phần đã có trong chương trình đào tạo sẽ không được hiển thị trong danh sách này.</p>
+            </div>
+        </div>
+    </div>
+
     <div class="card card-primary">
         <div class="card-header">
             <h3 class="card-title">Chọn học phần cho CTĐT: <strong>{{ ctdt.ten_nganh_ctdt }}</strong></h3>
@@ -56,9 +102,11 @@
                 <div class="form-group row">
                     <label for="filterDonViQL" class="col-sm-2 col-form-label">Lọc theo Đơn vị QL:</label>
                     <div class="col-sm-4">
-                        <select id="filterDonViQL" class="form-control">
+                        <select id="filterDonViQL" class="form-control select2">
                             <option value="">Tất cả đơn vị</option>
-                            <!-- Options will be loaded via AJAX or passed from view -->
+                            {% for don_vi in don_vi_list %}
+                                <option value="{{ don_vi.pk }}">{{ don_vi.ten_don_vi }}</option>
+                            {% endfor %}
                         </select>
                     </div>
                 </div>
@@ -126,23 +174,11 @@ $(document).ready(function() {
             "url": "//cdn.datatables.net/plug-ins/1.10.25/i18n/Vietnamese.json"
         },
         "initComplete": function(settings, json) {
-            $.ajax({
-                url: "{% url 'daotao:get_don_vi_dao_tao_options' %}",
-                type: "GET",
-                success: function(data) {
-                    var select = $('#filterDonViQL');
-                    $.each(data, function(key, value) {
-                        select.append($('<option></option>').attr('value', value.pk).text(value.ten_don_vi));
-                    });
-                    select.select2({
-                        placeholder: "Chọn đơn vị quản lý",
-                        allowClear: true,
-                        theme: 'bootstrap4'
-                    });
-                },
-                error: function(xhr, status, error) {
-                    console.error("Lỗi khi tải danh sách đơn vị quản lý:", error);
-                }
+            // Initialize Select2
+            $('#filterDonViQL').select2({
+                placeholder: "Chọn đơn vị quản lý",
+                allowClear: true,
+                theme: 'bootstrap4'
             });
         }
     });

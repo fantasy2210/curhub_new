@@ -666,3 +666,61 @@ class HinhThucDanhGia(models.Model):
         verbose_name = "Hình thức Đánh giá"
         verbose_name_plural = "Các Hình thức Đánh giá"
         ordering = ['de_cuong_hoc_phan', 'loai_danh_gia']
+
+# Model GiangVien
+class GiangVien(models.Model):
+    GIOI_TINH_CHOICES = [
+        ('Nam', 'Nam'),
+        ('Nữ', 'Nữ'),
+        ('Khác', 'Khác'),
+    ]
+    TRANG_THAI_CHOICES = [
+        ('Đang làm việc', 'Đang làm việc'),
+        ('Nghỉ hưu', 'Nghỉ hưu'),
+        ('Nghỉ việc', 'Nghỉ việc'),
+        ('Chuyển đến', 'Chuyển đến'),
+        ('Thôi việc', 'Thôi việc'),
+        ('Tạm nghỉ', 'Tạm nghỉ'),
+    ]
+
+    ho = models.CharField(max_length=100, verbose_name="Họ")
+    ten = models.CharField(max_length=50, verbose_name="Tên")
+    ngay_sinh = models.DateField(null=True, blank=True, verbose_name="Ngày sinh")
+    so_cccd_ho_chieu = models.CharField(max_length=50, blank=True, null=True, verbose_name="Số CCCD/Hộ chiếu")
+    ma_can_bo = models.CharField(max_length=20, null=True, blank=True, verbose_name="Mã cán bộ")
+    quoc_tich = models.CharField(max_length=100, default='Việt Nam', verbose_name="Quốc tịch")
+    gioi_tinh = models.CharField(max_length=10, choices=GIOI_TINH_CHOICES, verbose_name="Giới tính")
+    chuc_vu_cong_tac = models.CharField(max_length=255, blank=True, null=True, verbose_name="Chức vụ công tác")
+    chuc_danh_khoa_hoc = models.CharField(max_length=100, blank=True, null=True, verbose_name="Chức danh khoa học")
+    trinh_do_dao_tao = models.CharField(max_length=100, blank=True, null=True, verbose_name="Trình độ đào tạo (cao nhất)")
+    chuyen_mon_dao_tao = models.CharField(max_length=255, blank=True, null=True, verbose_name="Chuyên môn đào tạo")
+    email = models.EmailField(blank=True, null=True, verbose_name="Email")
+    dien_thoai = models.CharField(max_length=50, blank=True, null=True, verbose_name="Điện thoại")
+    trang_thai_lam_viec = models.CharField(max_length=50, choices=TRANG_THAI_CHOICES, default='Đang làm việc', verbose_name="Trạng thái làm việc")
+    
+    co_quan_cong_tac = models.ForeignKey(
+        DonViDaoTao, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True, 
+        verbose_name="Cơ quan công tác"
+    )
+    
+    chuong_trinh_tham_gia = models.ManyToManyField(
+        ChuongTrinhDaoTao,
+        blank=True,
+        related_name='giang_vien_tham_gia',
+        verbose_name="Chương trình đào tạo tham gia"
+    )
+
+    @property
+    def ho_ten(self):
+        return f"{self.ho} {self.ten}"
+
+    def __str__(self):
+        return self.ho_ten
+
+    class Meta:
+        verbose_name = "Giảng viên"
+        verbose_name_plural = "Danh sách Giảng viên"
+        ordering = ['ten', 'ho']

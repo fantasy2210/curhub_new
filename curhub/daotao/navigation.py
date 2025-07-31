@@ -36,6 +36,12 @@ def get_menu_items(user):
             'icon': 'fas fa-balance-scale',
             'required_perm': None,
         },
+        {
+            'name': 'Quản lý Giảng viên',
+            'url': 'daotao:danh_sach_giang_vien',
+            'icon': 'fas fa-chalkboard-teacher',
+            'required_perm': 'daotao.view_giangvien',
+        },
     ]
 
     visible_menus = []

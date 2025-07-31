@@ -42,9 +42,20 @@ urlpatterns = [
     path('ctdt/<int:pk_ctdt>/muc-tieu-dao-tao/them/', views.them_muc_tieu_dao_tao, name='them_muc_tieu_dao_tao'),
     path('ctdt/muc-tieu-dao-tao/<int:pk_po>/sua/', views.sua_muc_tieu_dao_tao, name='sua_muc_tieu_dao_tao'),
     path('ctdt/muc-tieu-dao-tao/<int:pk_po>/xoa/', views.xoa_muc_tieu_dao_tao, name='xoa_muc_tieu_dao_tao'),
+
+    # URLs for modal-based CRUD for PO and PLO
+    path('api/ctdt/<int:pk_ctdt>/po/them/', views.api_them_po, name='api_them_po'),
+    path('api/po/<int:pk_po>/sua/', views.sua_muc_tieu_dao_tao, name='api_sua_po'),
+    path('api/po/<int:pk_po>/chi-tiet/', views.api_get_po_details, name='api_get_po_details'),
+    path('api/ctdt/<int:pk_ctdt>/plo/them/', views.api_them_plo, name='api_them_plo'),
+    path('api/plo/<int:pk_cdr>/sua/', views.sua_chuan_dau_ra, name='api_sua_plo'),
+    path('api/plo/<int:pk_cdr>/chi-tiet/', views.api_get_plo_details, name='api_get_plo_details'), # New API endpoint
+
     path('api/nganh-dao-tao-options/', views.get_nganh_dao_tao_options, name='get_nganh_dao_tao_options'),
     path('api/don-vi-dao-tao-options/', views.get_don_vi_dao_tao_options, name='get_don_vi_dao_tao_options'),
     path('api/search-hoc-phan/', views.search_hoc_phan_api, name='search_hoc_phan_api'),
+    path('api/ctdt/<int:pk_ctdt>/search-hoc-phan/', views.search_hoc_phan_in_ctdt_api, name='search_hoc_phan_in_ctdt_api'),
+    path('api/hoc-phan-details/<int:pk_hoc_phan>/', views.get_hoc_phan_details, name='get_hoc_phan_details'),
     # Danh Muc Kien Thuc
     path('danh-muc-kien-thuc/', views.danh_sach_danh_muc_kien_thuc, name='danh_sach_danh_muc_kien_thuc'),
     path('danh-muc-kien-thuc/them/', views.them_danh_muc_kien_thuc, name='them_danh_muc_kien_thuc'),
@@ -56,4 +67,13 @@ urlpatterns = [
     path('hoc-phan/<int:pk_hoc_phan>/de-cuong/them/', views.them_de_cuong, name='them_de_cuong'),
     path('de-cuong/<int:pk_de_cuong>/sua/', views.sua_de_cuong, name='sua_de_cuong'),
     path('de-cuong/<int:pk_de_cuong>/xoa/', views.xoa_de_cuong, name='xoa_de_cuong'),
+    # API for getting course details
+    path('api/de-cuong-chi-tiet/<int:pk_hoc_phan>/', views.api_get_de_cuong_chi_tiet, name='api_get_de_cuong_chi_tiet'),
+    # API for program flowchart data
+    path('api/ctdt/<int:pk_ctdt>/flowchart-data/', views.api_program_flowchart_data, name='api_program_flowchart_data'),
+
+    # Giảng viên
+    path('giang-vien/danh-sach/', views.danh_sach_giang_vien, name='danh_sach_giang_vien'),
+    path('ctdt/<int:pk_ctdt>/quan-ly-giang-vien/', views.quan_ly_giang_vien_ctdt, name='quan_ly_giang_vien_ctdt'),
+    path('ctdt/<int:pk_ctdt>/cap-nhat-giang-vien/', views.cap_nhat_giang_vien_ctdt, name='cap_nhat_giang_vien_ctdt'),
 ]

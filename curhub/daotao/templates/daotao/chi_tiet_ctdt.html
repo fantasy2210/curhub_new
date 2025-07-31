@@ -42,7 +42,7 @@
         <!-- Workflow Action Buttons -->
         <div class="my-3">
             {% if ctdt.trang_thai == 'DRAFT' and perms.daotao.can_submit_for_approval %}
-            <form action="{% url 'daotao:gui_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn gửi duyệt chương trình này không?');">
+            <form action="{% url 'daotao:gui_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn gửi duyệt chương trình ini tidak?');">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-paper-plane mr-1"></i> Gửi duyệt
@@ -52,7 +52,7 @@
 
             {% if ctdt.trang_thai == 'PENDING_APPROVAL' %}
                 {% if perms.daotao.can_approve_ctdt %}
-                <form action="{% url 'daotao:xu_ly_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT chương trình này không?');">
+                <form action="{% url 'daotao:xu_ly_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT chương trình ini tidak?');">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="approve">
                     <button type="submit" class="btn btn-success">
@@ -98,7 +98,7 @@
             {% endif %}
 
             {% if ctdt.trang_thai == 'APPROVED' and perms.daotao.can_create_new_version %}
-            <form action="{% url 'daotao:tao_phien_ban_moi_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn tạo một phiên bản mới từ chương trình đào tạo này không?');">
+            <form action="{% url 'daotao:tao_phien_ban_moi_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn tạo một phiên bản mới từ chương trình đào tạo ini tidak?');">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-info">
                     <i class="fas fa-copy mr-1"></i> Tạo phiên bản mới
@@ -109,255 +109,407 @@
         <hr>
 
         <ul class="nav nav-tabs" id="ctdtTab" role="tablist">
-            <li class="nav-item">
-                <a class="nav-link active" id="info-tab" data-toggle="tab" href="#info-tab-pane" role="tab" aria-controls="info-tab-pane" aria-selected="true">Thông tin chung</a>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="info-tab" data-toggle="tab" data-target="#info-pane" type="button" role="tab" aria-controls="info-pane" aria-selected="true">Thông tin chung</button>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" id="hocphan-tab" data-toggle="tab" href="#hocphan-tab-pane" role="tab" aria-controls="hocphan-tab-pane" aria-selected="false">Cấu trúc Học phần</a>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="po-plo-tab" data-toggle="tab" data-target="#po-plo-pane" type="button" role="tab" aria-controls="po-plo-pane" aria-selected="false">Mục tiêu & CĐR</button>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" id="cdr-tab" data-toggle="tab" href="#cdr-tab-pane" role="tab" aria-controls="cdr-tab-pane" aria-selected="false">Chuẩn Đầu Ra</a>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="structure-tab" data-toggle="tab" data-target="#structure-pane" type="button" role="tab" aria-controls="structure-pane" aria-selected="false">Cấu trúc chương trình</button>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" id="po-tab" data-toggle="tab" href="#po-tab-pane" role="tab" aria-controls="po-tab-pane" aria-selected="false">Mục tiêu Đào tạo (PO)</a>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="plan-tab" data-toggle="tab" data-target="#plan-pane" type="button" role="tab" aria-controls="plan-pane" aria-selected="false">Kế hoạch học kỳ</button>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" id="history-tab" data-toggle="tab" href="#history-tab-pane" role="tab" aria-controls="history-tab-pane" aria-selected="false">Lịch sử Thay đổi</a>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="map-tab" data-toggle="tab" data-target="#map-pane" type="button" role="tab" aria-controls="map-pane" aria-selected="false">Sơ đồ CTĐT</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="staff-tab" data-toggle="tab" data-target="#staff-pane" type="button" role="tab" aria-controls="staff-pane" aria-selected="false">Đội ngũ giảng viên</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="prerequisite-tab" data-toggle="tab" data-target="#prerequisite-pane" type="button" role="tab" aria-controls="prerequisite-pane" aria-selected="false">Điều kiện môn học</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="export-tab" data-toggle="tab" data-target="#export-pane" type="button" role="tab" aria-controls="export-pane" aria-selected="false">Xuất báo cáo</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="giangvien-tab" data-toggle="tab" data-target="#giangvien-pane" type="button" role="tab" aria-controls="giangvien-pane" aria-selected="false">Giảng viên</button>
+            </li>
+             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-toggle="tab" data-target="#history-pane" type="button" role="tab" aria-controls="history-pane" aria-selected="false">Lịch sử Thay đổi</button>
             </li>
         </ul>
         
         <div class="tab-content" id="ctdtTabContent">
-            <div class="tab-pane fade show active p-3" id="info-tab-pane" role="tabpanel">
-                <h5>Thông tin chung về Chương trình Đào tạo</h5>
-                <p><strong>Mã CTĐT:</strong> {{ ctdt.ma_nganh_ctdt }}</p>
-                <p><strong>Đơn vị quản lý:</strong> {{ ctdt.don_vi_quan_ly.ten_don_vi }}</p>
-                <p><strong>Trình độ:</strong> {{ ctdt.get_trinh_do_dao_tao_display }}</p>
-                <p><strong>Hình thức đào tạo:</strong> {{ ctdt.get_hinh_thuc_dao_tao_display }}</p>
-                <p><strong>Tổng số tín chỉ yêu cầu:</strong> {{ ctdt.so_tin_chi_yeu_cau|default:"N/A" }}</p>
-                <p><strong>Thời gian đào tạo:</strong> {{ ctdt.thoi_gian_dao_tao|default:"N/A" }}</p>
-                <p><strong>Đối tượng tuyển sinh:</strong> {{ ctdt.doi_tuong_tuyen_sinh|default:"N/A"|safe }}</p>
-                <p><strong>Điều kiện tốt nghiệp:</strong> {{ ctdt.dieu_kien_tot_nghiep|default:"N/A"|safe }}</p>
-                <p><strong>Văn bằng tốt nghiệp:</strong> {{ ctdt.get_van_bang_tot_nghiep_display|default:"N/A" }}</p>
-                <p><strong>Chương trình tham khảo:</strong> {{ ctdt.chuong_trinh_tham_khao|default:"N/A"|safe }}</p>
-                <p><strong>Mô tả chung:</strong> {{ ctdt.mo_ta_chung|default:"N/A"|safe }}</p>
-                <p><strong>Ngày tạo:</strong> {{ ctdt.ngay_tao|date:"H:i:s d/m/Y" }}</p>
-                <p><strong>Ngày cập nhật:</strong> {{ ctdt.ngay_cap_nhat|date:"H:i:s d/m/Y" }}</p>
-                <p><strong>Phiên bản gốc:</strong>
-                    {% if ctdt.phien_ban_goc %}
-                        <a href="{% url 'daotao:chi_tiet_ctdt' pk_ctdt=ctdt.phien_ban_goc.pk %}">{{ ctdt.phien_ban_goc.ten_nganh_ctdt }} (v{{ ctdt.phien_ban_goc.version }})</a>
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </p>
-                <p><strong>Lý do thay đổi phiên bản:</strong> {{ ctdt.ly_do_thay_doi|default:"N/A"|linebreaksbr }}</p>
-            </div>
-            <div class="tab-pane fade p-3" id="hocphan-tab-pane" role="tabpanel">
-                <div class="mb-3 text-right">
-                    {% if perms.daotao.add_chitiethocphantrongctdt %}
-                    <a href="{% url 'daotao:them_hoc_phan_vao_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-primary btn-sm mr-2">
-                        <i class="fas fa-plus mr-1"></i> Thêm Học phần
-                    </a>
-                    <a href="{% url 'daotao:them_hoc_phan_hang_loat' pk_ctdt=ctdt.pk %}" class="btn btn-success btn-sm mr-2">
-                        <i class="fas fa-plus-circle mr-1"></i> Thêm Học phần hàng loạt
-                    </a>
-                    <a href="{% url 'daotao:upload_hoc_phan_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-info btn-sm">
-                        <i class="fas fa-upload mr-1"></i> Tải lên danh sách Học phần (Excel/CSV)
-                    </a>
+            <!-- Tab Thông tin chung -->
+            <div class="tab-pane fade show active p-3" id="info-pane" role="tabpanel" aria-labelledby="info-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Thông tin chung về Chương trình Đào tạo</h5>
+                    {% if perms.daotao.change_chuongtrinhdaotao and ctdt.trang_thai == 'DRAFT' %}
+                        <a href="{% url 'daotao:sua_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-warning btn-sm"><i class="fas fa-edit mr-1"></i> Chỉnh sửa</a>
                     {% endif %}
                 </div>
-                {% if ctdt.trang_thai == 'DRAFT' %}
-                <div class="alert alert-info alert-dismissible fade show" role="alert">
-                    <i class="fas fa-info-circle mr-1"></i> Bạn có thể nhấp vào các ô trong bảng (trừ Mã HP, Tên Học Phần, Tổng TC (Áp dụng) và Hành động) để sửa trực tiếp thông tin học phần.
-                    <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                <div class="row">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Tên chương trình (Tiếng Việt):</dt>
+                            <dd class="col-sm-7">{{ ctdt.ten_nganh_ctdt }}</dd>
+
+                            <dt class="col-sm-5">Tên chương trình (Tiếng Anh):</dt>
+                            <dd class="col-sm-7">{{ ctdt.ten_tieng_anh|default:"N/A" }}</dd>
+
+                            <dt class="col-sm-5">Trình độ đào tạo:</dt>
+                            <dd class="col-sm-7">{{ ctdt.get_trinh_do_dao_tao_display }}</dd>
+
+                            <dt class="col-sm-5">Ngành đào tạo:</dt>
+                            <dd class="col-sm-7">{{ ctdt.nganh_hoc_chung.ten_nganh|default:"N/A" }}</dd>
+
+                            <dt class="col-sm-5">Mã ngành:</dt>
+                            <dd class="col-sm-7">{{ ctdt.ma_nganh_ctdt }}</dd>
+
+                            <dt class="col-sm-5">Loại hình đào tạo:</dt>
+                            <dd class="col-sm-7">{{ ctdt.get_hinh_thuc_dao_tao_display }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Số tín chỉ yêu cầu:</dt>
+                            <dd class="col-sm-7">{{ ctdt.so_tin_chi_yeu_cau|default:"(tự động tính)" }}</dd>
+
+                            <dt class="col-sm-5">Thời gian đào tạo:</dt>
+                            <dd class="col-sm-7">{{ ctdt.thoi_gian_dao_tao|default:"N/A" }} năm</dd>
+
+                            <dt class="col-sm-5">Đối tượng tuyển sinh:</dt>
+                            <dd class="col-sm-7">{{ ctdt.doi_tuong_tuyen_sinh|default:"N/A"|safe }}</dd>
+                            
+                            <dt class="col-sm-5">Thang điểm:</dt>
+                            <dd class="col-sm-7">10</dd>
+
+                            <dt class="col-sm-5">Điều kiện tốt nghiệp:</dt>
+                            <dd class="col-sm-7">{{ ctdt.dieu_kien_tot_nghiep|default:"N/A"|safe }}</dd>
+
+                            <dt class="col-sm-5">Văn bằng tốt nghiệp:</dt>
+                            <dd class="col-sm-7">{{ ctdt.get_van_bang_tot_nghiep_display|default:"N/A" }}</dd>
+                        </dl>
+                    </div>
                 </div>
-                {% endif %}
-                <h5>Danh sách học phần trong chương trình</h5>
-                <div class="table-responsive">
-                    {% if hoc_phan_trong_ctdt %}
-                    <table class="table table-bordered table-hover" id="hocPhanCTDTTable">
-                        <thead>
-                            <tr>
-                                <th rowspan="2">TT</th>
-                                <th rowspan="2">Mã học phần</th>
-                                <th rowspan="2">Tên học phần</th>
-                                <th rowspan="2">Tổng số tiết</th>
-                                <th colspan="2">Lý thuyết</th>
-                                <th colspan="2">Thực hành</th>
-                                <th rowspan="2">Tự học và khác</th>
-                                <th rowspan="2">Ghi chú</th>
-                                <th rowspan="2">Hành động</th>
-                            </tr>
-                            <tr>
-                                <th>Tín chỉ</th>
-                                <th>Số giờ</th>
-                                <th>Tín chỉ</th>
-                                <th>Số giờ</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% regroup hoc_phan_trong_ctdt by hoc_ky_du_kien as semesters %}
-                            {% for semester in semesters %}
-                                {% if semester.grouper %}
-                                    <tr>
-                                        <td colspan="11" class="text-left font-weight-bold">● HỌC KỲ {{ semester.grouper }}</td>
-                                    </tr>
-                                {% else %}
-                                    <tr>
-                                        <td colspan="11" class="text-left font-weight-bold">● HỌC KỲ KHÔNG XÁC ĐỊNH</td>
-                                    </tr>
-                                {% endif %}
-                                {% for hp_ctdt in semester.list %}
-                                <tr data-pk="{{ hp_ctdt.pk }}">
-                                    <td>{{ forloop.counter }}</td>
-                                    <td>{{ hp_ctdt.hoc_phan.ma_hoc_phan }}</td>
-                                    <td class="text-left">{{ hp_ctdt.hoc_phan.ten_hoc_phan }}</td>
-                                    <td>{{ hp_ctdt.tong_so_gio_hoc_apdung }}</td>
-                                    <td class="editable" data-name="tin_chi_ly_thuyet_apdung" data-type="number">{{ hp_ctdt.tin_chi_ly_thuyet_apdung|default:"-" }}</td>
-                                    <td class="editable" data-name="so_gio_ly_thuyet_apdung" data-type="number">{{ hp_ctdt.so_gio_ly_thuyet_apdung|default:"-" }}</td>
-                                    <td class="editable" data-name="tin_chi_thuc_hanh_apdung" data-type="number">{{ hp_ctdt.tin_chi_thuc_hanh_apdung|default:"-" }}</td>
-                                    <td class="editable" data-name="so_gio_thuc_hanh_apdung" data-type="number">{{ hp_ctdt.so_gio_thuc_hanh_apdung|default:"-" }}</td>
-                                    <td class="editable" data-name="so_gio_tu_hoc_apdung" data-type="number">{{ hp_ctdt.so_gio_tu_hoc_apdung|default:"-" }}</td>
-                                    <td class="editable" data-name="ghi_chu_trong_ctdt" data-type="text">{{ hp_ctdt.ghi_chu_trong_ctdt|default:"" }}</td>
-                                    <td>
-                                        {% if perms.daotao.view_chitiethocphantrongctdt %}
-                                        <a href="{% url 'daotao:chi_tiet_hoc_phan_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-info btn-sm">Xem</a>
-                                        {% endif %}
-                                        {% if ctdt.trang_thai == 'DRAFT' %}
-                                            {% if perms.daotao.can_manage_program_structure %}
-                                            <a href="{% url 'daotao:sua_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-warning btn-sm">Sửa</a>
-                                            {% endif %}
-                                            {% if perms.daotao.delete_chitiethocphantrongctdt %}
-                                            <a href="{% url 'daotao:xoa_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-danger btn-sm">Xóa</a>
-                                            {% endif %}
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                                {% if semester.grouper %}
-                                    <tr>
-                                        <td colspan="3" class="text-left font-weight-bold">Tổng cộng Học kỳ {{ semester.grouper }}</td>
-                                        <td class="font-weight-bold">{{ semester.list|sum_attribute:'tong_so_tin_chi_apdung' }}</td>
-                                        <td class="font-weight-bold">{{ semester.list|sum_attribute:'tin_chi_ly_thuyet_apdung' }}</td>
-                                        <td class="font-weight-bold">{{ semester.list|sum_attribute:'so_gio_ly_thuyet_apdung' }}</td>
-                                        <td class="font-weight-bold">{{ semester.list|sum_attribute:'tin_chi_thuc_hanh_apdung' }}</td>
-                                        <td class="font-weight-bold">{{ semester.list|sum_attribute:'so_gio_thuc_hanh_apdung' }}</td>
-                                        <td class="font-weight-bold">{{ semester.list|sum_attribute:'so_gio_tu_hoc_apdung' }}</td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-                                {% endif %}
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    <p class="text-muted">Chưa có học phần nào được liên kết với chương trình này.</p>
-                    {% endif %}
+                 <div class="row">
+                    <div class="col-12">
+                        <hr>
+                        <h6>Chuẩn tham khảo</h6>
+                        <p>{{ ctdt.chuong_trinh_tham_khao|default:"Chưa có thông tin."|safe|linebreaksbr }}</p>
+                    </div>
                 </div>
             </div>
-            <div class="tab-pane fade p-3" id="cdr-tab-pane" role="tabpanel">
-                <div class="mb-3 text-right">
-                    {% if perms.daotao.add_chuandaura %}
-                    <a href="{% url 'daotao:them_chuan_dau_ra' pk_ctdt=ctdt.pk %}" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus-circle mr-1"></i> Thêm mới Chuẩn đầu ra
-                    </a>
-                    {% endif %}
-                </div>
-                <h5>Danh sách chuẩn đầu ra (PLO)</h5>
-                <div class="table-responsive">
-                    {% if plo_groups %}
-                    <table class="table table-bordered table-striped">
-                        <thead>
-                            <tr>
-                                <th style="width: 10%;">PLO</th>
-                                <th>Nội dung</th>
-                                {% for po in muc_tieu_dao_tao_ctdt %}
-                                <th class="text-center" style="width: 5%;">{{ po.ma_muc_tieu }}</th>
-                                {% endfor %}
-                                <th style="width: 10%;">Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for group_name, plos in plo_groups.items %}
-                                <tr class="table-light">
-                                    <td colspan="{{ 3|add:muc_tieu_dao_tao_ctdt.count }}"><strong>{{ group_name }}</strong></td>
-                                </tr>
-                                {% for plo in plos %}
-                                <tr>
-                                    <td>{{ plo.ma_cdr }}</td>
-                                    <td>{{ plo.noi_dung }}</td>
+
+            <!-- Tab Mục tiêu & CĐR -->
+            <div class="tab-pane fade p-3" id="po-plo-pane" role="tabpanel" aria-labelledby="po-plo-tab">
+                <ul class="nav nav-pills mb-3" id="po-plo-sub-tab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="po-sub-tab" data-toggle="pill" data-target="#po-sub-pane" type="button" role="tab" aria-controls="po-sub-pane" aria-selected="true">Mục tiêu Đào tạo (PO)</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="plo-sub-tab" data-toggle="pill" data-target="#plo-sub-pane" type="button" role="tab" aria-controls="plo-sub-pane" aria-selected="false">Chuẩn Đầu ra (PLO)</button>
+                    </li>
+                </ul>
+                <div class="tab-content" id="po-plo-sub-tabContent">
+                    <!-- Sub-tab PO -->
+                    <div class="tab-pane fade show active" id="po-sub-pane" role="tabpanel" aria-labelledby="po-sub-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5>Danh sách Mục tiêu Đào tạo (PO)</h5>
+                            {% if perms.daotao.add_muctieudaotao and is_draft %}
+                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#poModal" data-action="add">
+                                <i class="fas fa-plus-circle mr-1"></i> Thêm mới Mục tiêu
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="table-responsive">
+                            {% if muc_tieu_dao_tao_ctdt %}
+                            <table class="table table-bordered table-striped" id="poTable">
+                                <thead>
+                                    <tr>
+                                        <th>Mã PO</th>
+                                        <th>Nội dung</th>
+                                        <th>Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                                     {% for po in muc_tieu_dao_tao_ctdt %}
-                                    <td class="text-center">
-                                        {% if po.pk in plo.related_pos_pks %}
-                                            X
-                                        {% endif %}
-                                    </td>
+                                    <tr data-pk="{{ po.pk }}">
+                                        <td>{{ po.ma_muc_tieu }}</td>
+                                        <td>{{ po.noi_dung }}</td>
+                                        <td>
+                                            {% if perms.daotao.change_muctieudaotao and is_draft %}
+                                            <button class="btn btn-warning btn-sm btn-edit-po" data-pk="{{ po.pk }}">Sửa</button>
+                                            {% endif %}
+                                            {% if perms.daotao.delete_muctieudaotao and is_draft %}
+                                            <button class="btn btn-danger btn-sm btn-delete-po" data-pk="{{ po.pk }}">Xóa</button>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
                                     {% endfor %}
-                                    <td>
-                                        {% if perms.daotao.change_chuandaura %}
-                                        <a href="{% url 'daotao:sua_chuan_dau_ra' pk_cdr=plo.pk %}" class="btn btn-warning btn-sm">Sửa</a>
-                                        {% endif %}
-                                        {% if perms.daotao.delete_chuandaura %}
-                                        <a href="{% url 'daotao:xoa_chuan_dau_ra' pk_cdr=plo.pk %}" class="btn btn-danger btn-sm">Xóa</a>
-                                        {% endif %}
-                                    </td>
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <p class="text-muted">Chưa có mục tiêu đào tạo nào được định nghĩa.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <!-- Sub-tab PLO -->
+                    <div class="tab-pane fade" id="plo-sub-pane" role="tabpanel" aria-labelledby="plo-sub-tab">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h5>Danh sách chuẩn đầu ra (PLO)</h5>
+                             {% if perms.daotao.add_chuandaura and is_draft %}
+                            <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#ploModal" data-action="add">
+                                <i class="fas fa-plus-circle mr-1"></i> Thêm mới CĐR
+                            </button>
+                            {% endif %}
+                        </div>
+                        <div class="table-responsive">
+                            {% if plo_groups %}
+                            <table class="table table-bordered table-striped">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 10%;">PLO</th>
+                                        <th>Nội dung</th>
+                                        {% for po in muc_tieu_dao_tao_ctdt %}
+                                        <th class="text-center" style="width: 5%;">{{ po.ma_muc_tieu }}</th>
+                                        {% endfor %}
+                                        <th style="width: 10%;">Hành động</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for group_name, plos in plo_groups.items %}
+                                        <tr class="table-light">
+                                            <td colspan="{{ 3|add:muc_tieu_dao_tao_ctdt.count }}"><strong>{{ group_name }}</strong></td>
+                                        </tr>
+                                        {% for plo in plos %}
+                                        <tr>
+                                            <td>{{ plo.ma_cdr }}</td>
+                                            <td>{{ plo.noi_dung }}</td>
+                                            {% for po in muc_tieu_dao_tao_ctdt %}
+                                            <td class="text-center">
+                                                {% if po.pk in plo.related_pos_pks %} X {% endif %}
+                                            </td>
+                                            {% endfor %}
+                                            <td>
+                                                {% if perms.daotao.change_chuandaura and is_draft %}
+                                                <button class="btn btn-warning btn-sm btn-edit-plo" data-pk="{{ plo.pk }}">Sửa</button>
+                                                {% endif %}
+                                                {% if perms.daotao.delete_chuandaura and is_draft %}
+                                                <button class="btn btn-danger btn-sm btn-delete-plo" data-pk="{{ plo.pk }}">Xóa</button>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                            {% else %}
+                            <p class="text-muted">Chưa có chuẩn đầu ra nào được định nghĩa.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Cấu trúc chương trình -->
+            <div class="tab-pane fade p-3" id="structure-pane" role="tabpanel" aria-labelledby="structure-tab">
+                <!-- Dashboard Section -->
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <h4>Tổng quan cấu trúc</h4>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="info-box">
+                                    <span class="info-box-icon bg-info"><i class="fas fa-graduation-cap"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Tổng số tín chỉ</span>
+                                        <span class="info-box-number" id="total-credits">{{ tong_tin_chi_toan_ctdt }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- More info boxes can be added here -->
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <h4>Phân bổ tín chỉ</h4>
+                        <canvas id="creditsPieChart" style="min-height: 200px; height: 200px; max-height: 200px; max-width: 100%;"></canvas>
+                    </div>
+                </div>
+                <hr>
+
+                <!-- Toolbar Section -->
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0">Danh sách học phần</h4>
+                    <div class="btn-toolbar" role="toolbar">
+                        {% if perms.daotao.add_chitiethocphantrongctdt and is_draft %}
+                        <div class="btn-group mr-2" role="group">
+                            <a href="{% url 'daotao:them_hoc_phan_hang_loat' pk_ctdt=ctdt.pk %}" class="btn btn-success">
+                                <i class="fas fa-plus-circle mr-1"></i> Thêm học phần
+                            </a>
+                        </div>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-info dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                <i class="fas fa-file-import mr-1"></i> Nhập/Xuất
+                            </button>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item" href="{% url 'daotao:upload_hoc_phan_ctdt' pk_ctdt=ctdt.pk %}">
+                                    <i class="fas fa-file-excel mr-1 text-success"></i> Nhập từ Excel
+                                </a>
+                                <a class="dropdown-item" href="#">
+                                    <i class="fas fa-file-export mr-1 text-primary"></i> Xuất ra Excel
+                                </a>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Accordion for Knowledge Blocks -->
+                <div class="accordion" id="knowledgeBlocksAccordion">
+                    {% if hoc_phan_theo_khoi %}
+                        {% for ten_khoi, details in hoc_phan_theo_khoi.items %}
+                        <div class="card mb-1">
+                            <div class="card-header" id="heading-{{ details.id }}">
+                                <h2 class="mb-0">
+                                    <button class="btn btn-link btn-block text-left d-flex justify-content-between" type="button" data-toggle="collapse" data-target="#collapse-{{ details.id }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ details.id }}">
+                                        <span>{{ ten_khoi }}</span>
+                                        <span class="badge badge-primary">{{ details.tong_tin_chi }} TC</span>
+                                    </button>
+                                </h2>
+                            </div>
+                            <div id="collapse-{{ details.id }}" class="collapse {% if forloop.first %}show{% endif %}" aria-labelledby="heading-{{ details.id }}" data-parent="#knowledgeBlocksAccordion">
+                                <div class="card-body p-0">
+                                    {% include 'daotao/partials/_hoc_phan_table.html' with hoc_phan_list=details.hoc_phan_list table_id=details.id is_draft=is_draft %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% if hoc_phan_chua_xep_khoi %}
+                    <div class="card mb-1">
+                        <div class="card-header" id="heading-unassigned">
+                            <h2 class="mb-0">
+                                <button class="btn btn-link btn-block text-left d-flex justify-content-between" type="button" data-toggle="collapse" data-target="#collapse-unassigned" aria-expanded="false" aria-controls="collapse-unassigned">
+                                    <span>Chưa phân loại</span>
+                                    <span class="badge badge-secondary">{{ hoc_phan_chua_xep_khoi|length }} HP</span>
+                                </button>
+                            </h2>
+                        </div>
+                        <div id="collapse-unassigned" class="collapse" aria-labelledby="heading-unassigned" data-parent="#knowledgeBlocksAccordion">
+                            <div class="card-body p-0">
+                                {% include 'daotao/partials/_hoc_phan_table.html' with hoc_phan_list=hoc_phan_chua_xep_khoi table_id='unassigned-khoi' is_draft=is_draft %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if not hoc_phan_theo_khoi and not hoc_phan_chua_xep_khoi %}
+                        <div class="text-center p-3 text-muted">
+                            <p>Chưa có học phần nào được liên kết với chương trình ini.</p>
+                            {% if perms.daotao.add_chitiethocphantrongctdt and is_draft %}
+                            <a href="{% url 'daotao:them_hoc_phan_hang_loat' pk_ctdt=ctdt.pk %}" class="btn btn-success mt-2">
+                                <i class="fas fa-plus-circle mr-1"></i> Bắt đầu thêm học phần
+                            </a>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Tab Kế hoạch học kỳ -->
+            <div class="tab-pane fade p-3" id="plan-pane" role="tabpanel" aria-labelledby="plan-tab">
+                {% include 'daotao/partials/_ke_hoach_giang_day.html' %}
+            </div>
+
+            <!-- Tab Sơ đồ CTĐT -->
+            <div class="tab-pane fade p-3" id="map-pane" role="tabpanel" aria-labelledby="map-tab">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <h4>Sơ đồ Chương trình Đào tạo</h4>
+                        <p class="mb-0">Đây là biểu đồ trực quan hóa mối quan hệ tiên quyết giữa các học phần trong chương trình. Di chuột qua các học phần để xem quan hệ, click để xem chi tiết.</p>
+                    </div>
+                    <div class="btn-group">
+                        <button id="zoom-in-btn" class="btn btn-outline-secondary btn-sm"><i class="fas fa-search-plus"></i></button>
+                        <button id="zoom-out-btn" class="btn btn-outline-secondary btn-sm"><i class="fas fa-search-minus"></i></button>
+                        <button id="reset-zoom-btn" class="btn btn-outline-secondary btn-sm"><i class="fas fa-sync-alt"></i></button>
+                    </div>
+                </div>
+                <div class="flowchart-wrapper">
+                    <div class="mermaid" id="programFlowchart">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="sr-only">Đang tải sơ đồ...</span>
+                            </div>
+                            <p>Đang tải sơ đồ...</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="flowchartError" class="alert alert-danger" style="display: none;"></div>
+            </div>
+
+            <!-- Tab Đội ngũ giảng viên -->
+            <div class="tab-pane fade p-3" id="staff-pane" role="tabpanel" aria-labelledby="staff-tab">
+                <p>Nội dung cho Đội ngũ giảng viên sẽ được triển khai ở đây.</p>
+            </div>
+
+            <!-- Tab Điều kiện môn học -->
+            <div class="tab-pane fade p-3" id="prerequisite-pane" role="tabpanel" aria-labelledby="prerequisite-tab">
+                <p>Nội dung cho Điều kiện môn học sẽ được triển khai ở đây.</p>
+            </div>
+
+            <!-- Tab Xuất báo cáo -->
+            <div class="tab-pane fade p-3" id="export-pane" role="tabpanel" aria-labelledby="export-tab">
+                <p>Nội dung cho Xuất báo cáo sẽ được triển khai ở đây.</p>
+            </div>
+
+            <!-- Tab Giảng viên -->
+            <div class="tab-pane fade p-3" id="giangvien-pane" role="tabpanel" aria-labelledby="giangvien-tab">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5>Đội ngũ giảng viên tham gia chương trình</h5>
+                    {% if perms.daotao.change_chuongtrinhdaotao %}
+                        <a href="{% url 'daotao:quan_ly_giang_vien_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-users-cog mr-1"></i> Quản lý danh sách
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="table-responsive">
+                    {% with giang_vien_list=ctdt.giang_vien_tham_gia.all %}
+                        {% if giang_vien_list %}
+                        <table class="table table-bordered table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Mã cán bộ</th>
+                                    <th>Họ và tên</th>
+                                    <th>Email</th>
+                                    <th>Đơn vị công tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for gv in giang_vien_list %}
+                                <tr>
+                                    <td>{{ gv.ma_can_bo }}</td>
+                                    <td>{{ gv.ho_ten }}</td>
+                                    <td>{{ gv.email|default:"N/A" }}</td>
+                                    <td>{{ gv.co_quan_cong_tac.ten_don_vi|default:"N/A" }}</td>
                                 </tr>
                                 {% endfor %}
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    <p class="text-muted">Chưa có chuẩn đầu ra nào được định nghĩa cho chương trình này.</p>
-                    {% endif %}
+                            </tbody>
+                        </table>
+                        {% else %}
+                        <div class="alert alert-info">
+                            Chưa có giảng viên nào được thêm vào chương trình đào tạo này.
+                        </div>
+                        {% endif %}
+                    {% endwith %}
                 </div>
             </div>
-            <div class="tab-pane fade p-3" id="po-tab-pane" role="tabpanel">
-                <div class="mb-3 text-right">
-                    {% if perms.daotao.add_muctieudaotao %}
-                    <a href="{% url 'daotao:them_muc_tieu_dao_tao' pk_ctdt=ctdt.pk %}" class="btn btn-success btn-sm">
-                        <i class="fas fa-plus-circle mr-1"></i> Thêm mới Mục tiêu Đào tạo
-                    </a>
-                    {% endif %}
-                </div>
-                <h5>Danh sách Mục tiêu Đào tạo (PO)</h5>
-                <div class="table-responsive">
-                    {% if muc_tieu_dao_tao_ctdt %}
-                    <table class="table table-bordered table-striped" id="poTable">
-                        <thead>
-                            <tr>
-                                <th>Mã PO</th>
-                                <th>Nội dung</th>
-                                <th>Ngày tạo</th>
-                                <th>Ngày cập nhật</th>
-                                <th>Hành động</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for po in muc_tieu_dao_tao_ctdt %}
-                            <tr data-pk="{{ po.pk }}">
-                                <td class="editable" data-name="ma_muc_tieu" data-type="text">{{ po.ma_muc_tieu }}</td>
-                                <td class="editable" data-name="noi_dung" data-type="textarea">{{ po.noi_dung }}</td>
-                                <td>{{ po.ngay_tao|date:"H:i:s d/m/Y" }}</td>
-                                <td>{{ po.ngay_cap_nhat|date:"H:i:s d/m/Y" }}</td>
-                                <td>
-                                    {% if perms.daotao.change_muctieudaotao %}
-                                    <a href="{% url 'daotao:sua_muc_tieu_dao_tao' pk_po=po.pk %}" class="btn btn-warning btn-sm">Sửa</a>
-                                    {% endif %}
-                                    {% if perms.daotao.delete_muctieudaotao %}
-                                    <a href="{% url 'daotao:xoa_muc_tieu_dao_tao' pk_po=po.pk %}" class="btn btn-danger btn-sm">Xóa</a>
-                                    {% endif %}
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                    {% else %}
-                    <p class="text-muted">Chưa có mục tiêu đào tạo nào được định nghĩa cho chương trình này.</p>
-                    {% endif %}
-                </div>
-            </div>
-            <div class="tab-pane fade p-3" id="history-tab-pane" role="tabpanel">
+            
+            <!-- Tab Lịch sử thay đổi -->
+            <div class="tab-pane fade p-3" id="history-pane" role="tabpanel" aria-labelledby="history-tab">
                 <h5>Nhật ký thay đổi</h5>
                 <div class="table-responsive">
                     {% if lich_su_thay_doi %}
@@ -382,148 +534,683 @@
                         </tbody>
                     </table>
                     {% else %}
-                    <p class="text-muted">Chưa có lịch sử thay đổi nào cho chương trình này.</p>
+                    <p class="text-muted">Chưa có lịch sử thay đổi nào cho chương trình ini.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+{% include 'daotao/partials/_de_cuong_modal.html' %}
+
+<!-- PO Modal -->
+<div class="modal fade" id="poModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="poForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="poModalLabel">Mục tiêu Đào tạo</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    {{ po_form.as_p }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- PLO Modal -->
+<div class="modal fade" id="ploModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form id="ploForm">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ploModalLabel">Chuẩn Đầu ra</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    {% csrf_token %}
+                    {{ plo_form.as_p }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Lưu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script>
-$(document).ready(function() {
-    // Only enable inline editing if the CTDT is in DRAFT status
-    var isDraft = "{{ ctdt.trang_thai }}" === "DRAFT";
+    // Initialize Mermaid
+    mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { 'primaryColor': '#f4f4f4', 'primaryTextColor': '#333' } });
 
-    if (isDraft) {
-        // --- INLINE EDITING FOR HOC PHAN ---
-        $('#hocPhanCTDTTable').on('click', '.editable', function() {
-            var $cell = $(this);
-            if ($cell.find('input, select').length) return;
+    // --- Flowchart Logic ---
+    (function() {
+        function escapeMermaidString(str) {
+            if (typeof str !== 'string') return str;
+            return str.replace(/"/g, '#quot;');
+        }
 
-            var originalContent = $cell.text().trim();
-            var fieldName = $cell.data('name');
-            var fieldType = $cell.data('type');
-            var pk = $cell.closest('tr').data('pk');
-            var inputElement;
+        async function renderFlowchart() {
+            const flowchartContainer = document.getElementById('programFlowchart');
+            const errorContainer = document.getElementById('flowchartError');
+            const ctdtPk = "{{ ctdt.pk }}";
+            const url = `{% url 'daotao:api_program_flowchart_data' pk_ctdt=0 %}`.replace('0', ctdtPk);
 
-            if (fieldType === 'number') {
-                inputElement = $('<input type="number" class="form-control form-control-sm">').val(originalContent === '-' ? '' : originalContent);
-            } else if (fieldType === 'select' && fieldName === 'la_bat_buoc') {
-                inputElement = $('<select class="form-control form-control-sm">');
-                inputElement.append($('<option>', { value: 'True', text: 'Có' }));
-                inputElement.append($('<option>', { value: 'False', text: 'Không' }));
-                inputElement.val($cell.data('value'));
-            } else {
-                inputElement = $('<input type="text" class="form-control form-control-sm">').val(originalContent);
-            }
-
-            $cell.html(inputElement);
-            inputElement.focus();
-
-            var saveHocPhanChanges = function() {
-                var newValue = inputElement.val();
-                var displayValue = newValue;
-
-                if (fieldType === 'number' && newValue === '') {
-                    newValue = null;
-                    displayValue = '-';
-                } else if (fieldType === 'select' && fieldName === 'la_bat_buoc') {
-                    displayValue = (newValue === 'True' ? 'Có' : 'Không');
+            try {
+                console.log("Fetching flowchart data...");
+                const response = await fetch(url);
+                console.log("Fetch response:", response);
+                if (!response.ok) {
+                    throw new Error(`Network response was not ok (${response.status})`);
                 }
-                
-                $cell.text(displayValue);
+                const data = await response.json();
+                console.log("Received data:", data);
 
-                $.ajax({
-                    url: "{% url 'daotao:update_chi_tiet_hoc_phan_inline' %}",
-                    type: "POST",
-                    data: { 'pk': pk, 'field': fieldName, 'value': newValue, 'csrfmiddlewaretoken': '{{ csrf_token }}' },
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            toastr.success('Cập nhật học phần thành công!');
-                            if (fieldName === 'la_bat_buoc') {
-                                $cell.text(response.new_value ? 'Có' : 'Không');
-                                $cell.data('value', response.new_value ? 'True' : 'False');
-                            } else {
-                                $cell.text(response.new_value === null ? '-' : response.new_value);
-                            }
-                        } else {
-                            toastr.error('Lỗi: ' + response.message);
-                            $cell.text(originalContent);
+                if (data.nodes && data.nodes.length > 0) {
+                    let mermaidSyntax = 'graph TD;\n';
+                    
+                    data.nodes.forEach(node => {
+                        const displayName = escapeMermaidString(node.name);
+                        const displayId = escapeMermaidString(node.original_id);
+                        mermaidSyntax += `    ${node.id}["${displayId}<br/>${displayName}"];\n`;
+                        if (node.khoi_kien_thuc) {
+                             mermaidSyntax += `    style ${node.id} ${getKhoiColor(node.khoi_kien_thuc)}\n`;
                         }
-                    },
-                    error: function() {
-                        toastr.error('Lỗi AJAX khi cập nhật học phần.');
-                        $cell.text(originalContent);
+                    });
+
+                    data.edges.forEach(edge => {
+                        const arrow = edge.type === 'songhanh' ? '-.->' : '-->';
+                        mermaidSyntax += `    ${edge.source} ${arrow} ${edge.target};\n`;
+                    });
+                    
+                    console.log("Generated Mermaid Syntax:\n", mermaidSyntax);
+
+                    flowchartContainer.innerHTML = '';
+                    const { svg } = await mermaid.render('flowchartSvg', mermaidSyntax);
+                    flowchartContainer.innerHTML = svg;
+
+                    const svgEl = flowchartContainer.querySelector('svg');
+                    if (svgEl) {
+                        svgEl.querySelectorAll('.node').forEach(nodeEl => {
+                            const nodeId = nodeEl.id;
+                            nodeEl.addEventListener('mouseover', () => highlightNodes(nodeId, data.edges));
+                            nodeEl.addEventListener('mouseout', () => unhighlightNodes());
+                            nodeEl.addEventListener('click', () => showNodeTooltip(nodeId, data.nodes));
+                        });
                     }
-                });
-            };
 
-            inputElement.on('blur', saveHocPhanChanges).on('keypress', function(e) {
-                if (e.which == 13) { e.preventDefault(); saveHocPhanChanges(); }
-            });
-        });
-
-        // --- INLINE EDITING FOR PO ---
-        $('#poTable').on('click', '.editable', function() {
-            var $cell = $(this);
-            if ($cell.find('input, textarea').length) return;
-
-            var originalContent = $cell.text().trim();
-            var fieldName = $cell.data('name');
-            var fieldType = $cell.data('type');
-            var pk = $cell.closest('tr').data('pk');
-            var inputElement;
-
-            if (fieldType === 'textarea') {
-                inputElement = $('<textarea class="form-control form-control-sm" style="height: 120px;"></textarea>').val(originalContent);
-            } else {
-                inputElement = $('<input type="text" class="form-control form-control-sm">').val(originalContent);
+                } else {
+                    flowchartContainer.innerHTML = '<div class="alert alert-info">Không có dữ liệu học phần để vẽ sơ đồ.</div>';
+                }
+            } catch (error) {
+                console.error('Error fetching or rendering flowchart:', error);
+                const mermaidErrorDiv = document.querySelector('#programFlowchart > svg > foreignObject > div');
+                if (mermaidErrorDiv) {
+                    errorContainer.innerHTML = `<strong>Lỗi cú pháp Mermaid:</strong><pre>${mermaidErrorDiv.innerText}</pre>`;
+                } else {
+                    errorContainer.textContent = 'Không thể tải sơ đồ chương trình đào tạo. Vui lòng thử lại sau.';
+                }
+                errorContainer.style.display = 'block';
+                flowchartContainer.style.display = 'none';
             }
+        }
 
-            $cell.html(inputElement);
-            inputElement.focus();
-
-            var savePoChanges = function() {
-                var newValue = inputElement.val();
-                $cell.text(newValue);
-
-                $.ajax({
-                    url: "{% url 'daotao:update_muc_tieu_dao_tao_inline' %}",
-                    type: "POST",
-                    data: { 'pk': pk, 'field': fieldName, 'value': newValue, 'csrfmiddlewaretoken': '{{ csrf_token }}' },
-                    success: function(response) {
-                        if (response.status === 'success') {
-                            toastr.success('Cập nhật mục tiêu thành công!');
-                            $cell.text(response.new_value);
-                        } else {
-                            toastr.error('Lỗi: ' + response.message);
-                            $cell.text(originalContent);
-                        }
-                    },
-                    error: function() {
-                        toastr.error('Lỗi AJAX khi cập nhật mục tiêu.');
-                        $cell.text(originalContent);
-                    }
-                });
+        function getKhoiColor(khoi) {
+            const colors = {
+                'Kiến thức giáo dục đại cương': 'fill:#f9f9f9,stroke:#333,stroke-width:2px',
+                'Kiến thức cơ sở ngành': 'fill:#cde4ff,stroke:#333,stroke-width:1px',
+                'Kiến thức chuyên ngành': 'fill:#a3c9ff,stroke:#333,stroke-width:1px',
+                'Tốt nghiệp': 'fill:#ffcc80,stroke:#333,stroke-width:1px'
             };
+            for (const key in colors) {
+                if (khoi.includes(key)) return colors[key];
+            }
+            return 'fill:#e9ecef,stroke:#333,stroke-width:1px';
+        }
 
-            inputElement.on('blur', savePoChanges).on('keypress', function(e) {
-                if (e.which == 13 && fieldType !== 'textarea') { e.preventDefault(); savePoChanges(); }
+        function highlightNodes(nodeId, edges) {
+            const svg = document.querySelector('#programFlowchart svg');
+            if (!svg) return;
+            svg.querySelectorAll('.node, .edgePath').forEach(el => el.classList.add('dimmed'));
+            const relatedNodeIds = new Set([nodeId]);
+            edges.forEach(edge => {
+                if (edge.target === nodeId) relatedNodeIds.add(edge.source);
+                if (edge.source === nodeId) relatedNodeIds.add(edge.target);
             });
+            relatedNodeIds.forEach(id => {
+                const nodeEl = svg.querySelector(`#${id}`);
+                if(nodeEl) nodeEl.classList.remove('dimmed');
+            });
+        }
+
+        function unhighlightNodes() {
+            const svg = document.querySelector('#programFlowchart svg');
+            if (!svg) return;
+            svg.querySelectorAll('.dimmed').forEach(el => el.classList.remove('dimmed'));
+        }
+
+        function showNodeTooltip(nodeId, nodes) {
+            const nodeData = nodes.find(n => n.id === nodeId);
+            if (!nodeData) return;
+            alert(`Học phần: ${nodeData.name} (${nodeData.original_id})\nSố tín chỉ: ${nodeData.tin_chi}\nKhối kiến thức: ${nodeData.khoi_kien_thuc}`);
+        }
+
+        // --- Zoom Logic ---
+        let currentScale = 1.5; // Set initial zoom higher as requested
+        const zoomStep = 0.3;
+
+        function applyZoom() {
+            const svg = document.querySelector('#programFlowchart svg');
+            if (svg) {
+                svg.style.transform = `scale(${currentScale})`;
+                svg.style.transformOrigin = 'top left';
+            }
+        }
+        
+        document.getElementById('zoom-in-btn').addEventListener('click', () => {
+            currentScale += zoomStep;
+            applyZoom();
         });
 
-    } else {
-        // If not in DRAFT, remove editable class from all tables to prevent interaction
-        $('#hocPhanCTDTTable .editable, #poTable .editable').removeClass('editable');
-    }
+        document.getElementById('zoom-out-btn').addEventListener('click', () => {
+            currentScale = Math.max(0.2, currentScale - zoomStep);
+            applyZoom();
+        });
+
+        document.getElementById('reset-zoom-btn').addEventListener('click', () => {
+            currentScale = 1.0;
+            applyZoom();
+        });
+
+        // --- Panning (Drag-to-scroll) Logic ---
+        const wrapper = document.querySelector('.flowchart-wrapper');
+        if (wrapper) {
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            wrapper.addEventListener('mousedown', (e) => {
+                isDown = true;
+                wrapper.style.cursor = 'grabbing';
+                wrapper.style.userSelect = 'none';
+                startX = e.pageX - wrapper.offsetLeft;
+                scrollLeft = wrapper.scrollLeft;
+            });
+            wrapper.addEventListener('mouseleave', () => {
+                isDown = false;
+                wrapper.style.cursor = 'grab';
+                wrapper.style.removeProperty('user-select');
+            });
+            wrapper.addEventListener('mouseup', () => {
+                isDown = false;
+                wrapper.style.cursor = 'grab';
+                wrapper.style.removeProperty('user-select');
+            });
+            wrapper.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - wrapper.offsetLeft;
+                const walk = (x - startX) * 2; // scroll-fast
+                wrapper.scrollLeft = scrollLeft - walk;
+            });
+        }
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const mapTab = document.getElementById('map-tab');
+            if (mapTab) {
+                // Use Bootstrap's event system via jQuery.
+                // The selector was 'a[data-toggle="tab"]', which is wrong for <button> elements.
+                // Using a more general selector '[data-toggle="tab"]'.
+                $('[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+                    if (e.target.id === 'map-tab') {
+                        // Check if it's already rendered to avoid re-fetching data
+                        if ($('#programFlowchart').find('svg').length === 0) {
+                            renderFlowchart();
+                        }
+                    }
+                });
+
+                // Also check if the tab is active on page load (e.g. via URL hash)
+                if (mapTab.classList.contains('active')) {
+                    renderFlowchart();
+                }
+            }
+        });
+    })();
+
+$(document).ready(function() {
+    var isDraft = "{{ ctdt.trang_thai }}" === "DRAFT";
+    var ctdt_pk = "{{ ctdt.pk }}";
+
+    // --- Chart.js Pie Chart ---
+    var pieChartCanvas = $('#creditsPieChart').get(0).getContext('2d');
+    var pieData = {
+        labels: JSON.parse('{{ pie_chart_labels_json|safe }}'),
+        datasets: [{
+            data: JSON.parse('{{ pie_chart_data_json|safe }}'),
+            backgroundColor: ['#f56954', '#00a65a', '#f39c12', '#00c0ef', '#3c8dbc', '#d2d6de', '#a481d0', '#ff851b', '#01ff70', '#39cccc'],
+        }]
+    };
+    var pieOptions = {
+        maintainAspectRatio: false,
+        responsive: true,
+        legend: {
+            position: 'right',
+            labels: {
+                padding: 10,
+                boxWidth: 12
+            }
+        }
+    };
+    new Chart(pieChartCanvas, {
+        type: 'pie',
+        data: pieData,
+        options: pieOptions
+    });
+
+
+    // PO Modal Logic
+    $('#poModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var action = button.data('action');
+        var modal = $(this);
+        var form = modal.find('#poForm');
+        form.attr('data-action', action);
+        form[0].reset();
+
+        if (action === 'add') {
+            modal.find('.modal-title').text('Thêm mới Mục tiêu Đào tạo');
+            form.attr('action', `{% url 'daotao:api_them_po' pk_ctdt=ctdt.pk %}`);
+            form.attr('data-pk', '');
+        } else if (action === 'edit') {
+            var pk = button.data('pk');
+            modal.find('.modal-title').text('Cập nhật Mục tiêu Đào tạo');
+            form.attr('action', `{% url 'daotao:api_sua_po' pk_po=0 %}`.replace('0', pk));
+            form.attr('data-pk', pk);
+
+            $.ajax({
+                url: `{% url 'daotao:api_get_po_details' pk_po=0 %}`.replace('0', pk),
+                type: 'GET',
+                success: function(data) {
+                    $('#id_ma_muc_tieu').val(data.ma_muc_tieu);
+                    $('#id_noi_dung').val(data.noi_dung);
+                },
+                error: function() {
+                    alert('Không thể tải dữ liệu Mục tiêu Đào tạo.');
+                }
+            });
+        }
+    });
+
+    $('#poForm').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var url = form.attr('action');
+        var data = form.serialize();
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: data,
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#poModal').modal('hide');
+                    location.reload(); // Simple reload for now
+                } else {
+                    var errorMessages = [];
+                    if (response.errors) {
+                        for (var field in response.errors) {
+                            errorMessages.push(`${field}: ${response.errors[field].join(', ')}`);
+                        }
+                    } else {
+                        errorMessages.push(response.message || 'Đã có lỗi xảy ra.');
+                    }
+                    alert('Lỗi: \n' + errorMessages.join('\n'));
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                var errorMessage = 'Lỗi kết nối hoặc lỗi máy chủ.';
+                if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                    errorMessage = jqXHR.responseJSON.message;
+                }
+                alert(errorMessage);
+            }
+        });
+    });
+
+    // Edit PO button click handler
+    $('#poTable').on('click', '.btn-edit-po', function() {
+        var pk = $(this).data('pk');
+        $('#poModal').modal('show');
+        $('#poModal').find('.modal-title').text('Cập nhật Mục tiêu Đào tạo');
+        $('#poModal').find('#poForm').attr('data-action', 'edit');
+        $('#poModal').find('#poForm').attr('data-pk', pk);
+    });
+
+    // PLO Modal Logic
+    $('#ploModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var action = button.data('action');
+        var modal = $(this);
+        var form = modal.find('#ploForm');
+        form.attr('data-action', action);
+        form[0].reset(); // Clear form fields
+
+        if (action === 'add') {
+            modal.find('.modal-title').text('Thêm mới Chuẩn Đầu ra');
+            form.attr('action', `{% url 'daotao:api_them_plo' pk_ctdt=ctdt.pk %}`);
+            form.attr('data-pk', ''); // Clear PK for add
+            // Ensure checkboxes for dap_ung_muc_tieu are unchecked
+            form.find('input[name="dap_ung_muc_tieu"]').prop('checked', false);
+        } else if (action === 'edit') {
+            var pk = button.data('pk');
+            modal.find('.modal-title').text('Cập nhật Chuẩn Đầu ra');
+            form.attr('action', `{% url 'daotao:api_sua_plo' pk_cdr=0 %}`.replace('0', pk));
+            form.attr('data-pk', pk);
+
+            // Fetch PLO details and populate the form
+            $.ajax({
+                url: `{% url 'daotao:api_get_plo_details' pk_cdr=0 %}`.replace('0', pk),
+                type: 'GET',
+                success: function(data) {
+                    $('#id_ma_cdr').val(data.ma_cdr);
+                    $('#id_noi_dung').val(data.noi_dung);
+                    $('#id_loai_cdr').val(data.loai_cdr);
+                    // Handle ManyToMany field (dap_ung_muc_tieu)
+                    form.find('input[name="dap_ung_muc_tieu"]').prop('checked', false); // Uncheck all first
+                    data.dap_ung_muc_tieu.forEach(function(po_pk) {
+                        form.find(`input[name="dap_ung_muc_tieu"][value="${po_pk}"]`).prop('checked', true);
+                    });
+                },
+                error: function() {
+                    alert('Không thể tải dữ liệu Chuẩn Đầu ra.');
+                }
+            });
+        }
+    });
+
+    $('#ploForm').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        var url = form.attr('action');
+        var data = form.serialize();
+        var action = form.attr('data-action');
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: data,
+            success: function(response) {
+                if (response.status === 'success') {
+                    $('#ploModal').modal('hide');
+                    location.reload(); // Simple reload for now
+                } else {
+                    var errorMessages = [];
+                    if (response.errors) {
+                        for (var field in response.errors) {
+                            errorMessages.push(`${field}: ${response.errors[field].join(', ')}`);
+                        }
+                    } else {
+                        errorMessages.push(response.message || 'Đã có lỗi xảy ra.');
+                    }
+                    alert('Lỗi: \n' + errorMessages.join('\n'));
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                var errorMessage = 'Lỗi kết nối hoặc lỗi máy chủ.';
+                if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                    errorMessage = jqXHR.responseJSON.message;
+                }
+                alert(errorMessage);
+            }
+        });
+    });
+
+    // Edit PLO button click handler
+    $('#plo-sub-pane').on('click', '.btn-edit-plo', function() {
+        var pk = $(this).data('pk');
+        $('#ploModal').modal('show');
+        $('#ploModal').find('.modal-title').text('Cập nhật Chuẩn Đầu ra');
+        $('#ploModal').find('#ploForm').attr('data-action', 'edit');
+        $('#ploModal').find('#ploForm').attr('data-pk', pk);
+        // The 'show.bs.modal' event handler will fetch and populate the data
+    });
+
+    // Delete PO
+    $('#poTable').on('click', '.btn-delete-po', function() {
+        var pk = $(this).data('pk');
+        if (confirm('Bạn có chắc chắn muốn xóa mục tiêu ini?')) {
+            $.ajax({
+                url: `{% url 'daotao:xoa_muc_tieu_dao_tao' pk_po=0 %}`.replace('0', pk),
+                type: 'POST',
+                data: {'csrfmiddlewaretoken': '{{ csrf_token }}'},
+                success: function(response) {
+                    if (response.status === 'success') {
+                        location.reload();
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                }
+            });
+        }
+    });
+
+    // Delete PLO
+    $('#plo-sub-pane').on('click', '.btn-delete-plo', function() {
+        var pk = $(this).data('pk');
+        if (confirm('Bạn có chắc chắn muốn xóa chuẩn đầu ra ini?')) {
+            $.ajax({
+                url: `{% url 'daotao:xoa_chuan_dau_ra' pk_cdr=0 %}`.replace('0', pk),
+                type: 'POST',
+                data: {'csrfmiddlewaretoken': '{{ csrf_token }}'},
+                success: function(response) {
+                    if (response.status === 'success') {
+                        location.reload();
+                    } else {
+                        alert('Lỗi: ' + response.message);
+                    }
+                }
+            });
+        }
+    });
+
+
     // Activate tab based on URL hash
     var hash = window.location.hash;
     if (hash) {
         $('a[href="' + hash + '"]').tab('show');
     }
+
+    // --- Syllabus Modal Logic ---
+    $('#deCuongChiTietModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget);
+        var hocPhanPk = button.data('hoc-phan-pk');
+        var modal = $(this);
+        var modalBody = modal.find('.modal-body');
+        var contentArea = modal.find('#modal-content-area');
+        var loadingIndicator = modal.find('#modal-loading');
+        var errorArea = modal.find('#modal-error');
+
+        // Reset state
+        loadingIndicator.show();
+        contentArea.hide().empty();
+        errorArea.hide();
+
+        var url = `{% url 'daotao:api_get_de_cuong_chi_tiet' pk_hoc_phan=0 %}`.replace('0', hocPhanPk);
+
+        $.ajax({
+            url: url,
+            type: 'GET',
+            success: function(data) {
+                loadingIndicator.hide();
+                
+                var html = `
+                    <h4>${data.ma_hoc_phan} - ${data.ten_hoc_phan}</h4>
+                    <p class="text-muted">
+                        <strong>Số tín chỉ:</strong> ${data.so_tin_chi} | 
+                        <strong>Đơn vị quản lý:</strong> ${data.don_vi_quan_ly} |
+                        <strong>Phiên bản:</strong> ${data.ten_de_cuong_phien_ban} (${data.ngay_ban_hanh})
+                    </p>
+                    <hr>
+                    
+                    <h5>1. Mục tiêu học phần</h5>
+                    <p>${data.muc_tieu_hoc_phan || 'Chưa có'}</p>
+
+                    <h5>2. Chuẩn đầu ra học phần (CLO)</h5>
+                    ${data.chuan_dau_ra.length > 0 ? `
+                        <table class="table table-sm table-bordered">
+                            <thead><tr><th>Mã CLO</th><th>Nội dung</th><th>Mức độ Bloom</th></tr></thead>
+                            <tbody>
+                                ${data.chuan_dau_ra.map(clo => `
+                                    <tr>
+                                        <td>${clo.ma_clo}</td>
+                                        <td>${clo.noi_dung}</td>
+                                        <td>${clo.muc_do_bloom}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<p>Chưa có chuẩn đầu ra.</p>'}
+
+
+                    <h5>3. Tóm tắt nội dung</h5>
+                    <p>${data.tom_tat_noi_dung || 'Chưa có'}</p>
+
+                    <h5>4. Nội dung chi tiết</h5>
+                    ${data.noi_dung_chi_tiet.length > 0 ? `
+                        <table class="table table-sm table-bordered">
+                            <thead><tr><th>Tuần/Chủ đề</th><th>Nội dung</th><th>Giờ LT</th><th>Giờ TH</th><th>Giờ Tự học</th><th>CLO liên quan</th></tr></thead>
+                            <tbody>
+                                ${data.noi_dung_chi_tiet.map(nd => `
+                                    <tr>
+                                        <td>${nd.tuan_hoc_hoac_chu_de}</td>
+                                        <td>${nd.noi_dung_giang_day}</td>
+                                        <td>${nd.so_gio_ly_thuyet}</td>
+                                        <td>${nd.so_gio_thuc_hanh}</td>
+                                        <td>${nd.so_gio_tu_hoc}</td>
+                                        <td>${nd.chuan_dau_ra_lien_quan.join(', ')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<p>Chưa có nội dung chi tiết.</p>'}
+
+                    <h5>5. Đánh giá học phần</h5>
+                     ${data.hinh_thuc_danh_gia.length > 0 ? `
+                        <table class="table table-sm table-bordered">
+                            <thead><tr><th>Hình thức</th><th>Loại</th><th>Tỷ lệ (%)</th><th>CLO được đánh giá</th></tr></thead>
+                            <tbody>
+                                ${data.hinh_thuc_danh_gia.map(dg => `
+                                    <tr>
+                                        <td>${dg.ten_hinh_thuc}</td>
+                                        <td>${dg.loai_danh_gia}</td>
+                                        <td>${dg.ty_le_diem}</td>
+                                        <td>${dg.chuan_dau_ra_danh_gia.join(', ')}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    ` : '<p>Chưa có hình thức đánh giá.</p>'}
+
+                    <h5>6. Tài liệu học tập</h5>
+                    <p>${data.tai_lieu_hoc_tap || 'Chưa có'}</p>
+                `;
+
+                contentArea.html(html).show();
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                loadingIndicator.hide();
+                var errorMessage = "Không thể tải được đề cương chi tiết. ";
+                if (jqXHR.status == 404) {
+                    errorMessage += "Không tìm thấy phiên bản đề cương hiện hành cho học phần ini.";
+                } else {
+                    errorMessage += "Lỗi máy chủ: " + errorThrown;
+                }
+                errorArea.text(errorMessage).show();
+            }
+        });
+    });
 });
 </script>
+<style>
+    .flowchart-wrapper {
+        overflow-x: auto;
+        border: 1px solid #ddd;
+        padding: 1rem;
+        background-color: #fdfdfd;
+        cursor: grab;
+    }
+    .mermaid {
+        text-align: center;
+    }
+    .mermaid svg {
+        max-width: none;
+        min-width: 2000px; /* Force a much larger base width for initial render */
+        min-height: 1000px; /* Ensure ample vertical space */
+        height: auto;
+        transition: transform 0.2s ease-in-out; /* Smooth zoom transition */
+    }
+    .mermaid .dimmed {
+        opacity: 0.3;
+    }
+    .mermaid .node {
+        transition: opacity 0.2s ease-in-out;
+        cursor: pointer;
+    }
+</style>
 {% endblock scripts %}
+
+</final_file_content>
+
+IMPORTANT: For any future changes to this file, use the final_file_content shown above as your reference. This content reflects the current state of the file, including any auto-formatting (e.g., if you used single quotes but the formatter converted them to double quotes). Always base your SEARCH/REPLACE operations on this final version to ensure accuracy.
+
+<environment_details>
+# VSCode Visible Files
+curhub/daotao/templates/daotao/chi_tiet_ctdt.html
+
+# VSCode Open Tabs
+c:/Users/nttoan/AppData/Roaming/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
+requirements.txt
+curhub/curhub/settings.py
+curhub/daotao/templates/daotao/danh_sach_ctdt.html
+curhub/daotao/templates/daotao/partials/_form_fields.html
+curhub/daotao/templates/daotao/them_hoc_phan_vao_ctdt.html
+curhub/daotao/templates/daotao/upload_hoc_phan_ctdt.html
+curhub/daotao/templates/daotao/them_hoc_phan_hang_loat.html
+curhub/daotao/templates/daotao/xoa_chi_tiet_hp_trong_ctdt_confirm.html
+curhub/daotao/templatetags/custom_filters.py
+curhub/daotao/forms.py
+curhub/daotao/templates/daotao/partials/_de_cuong_modal.html
+curhub/daotao/templates/daotao/partials/_hoc_phan_table.html
+curhub/daotao/templates/daotao/partials/_ke_hoach_giang_day.html
+curhub/daotao/urls.py
+curhub/daotao/views.py
+curhub/daotao/templates/daotao/chi_tiet_ctdt.html
+
+# Current Time
+7/31/2025, 10:41:01 AM (Asia/Bangkok, UTC+7:00)
+
+# Context Window Usage
+248,685 / 1,048.576K tokens used (24%)
+
+# Current Mode
+ACT MODE
+</environment_details>

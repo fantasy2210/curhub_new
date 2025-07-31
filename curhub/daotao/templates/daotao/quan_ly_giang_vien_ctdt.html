@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-2">
+        <div class="col-sm-6">
+            <h1>{{ page_title }}</h1>
+            <h5 class="text-muted">{{ ctdt.ten_nganh_ctdt }}</h5>
+        </div>
+        <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+                <li class="breadcrumb-item"><a href="{% url 'daotao:index' %}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'daotao:danh_sach_ctdt' %}">CTĐT</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'daotao:chi_tiet_ctdt' ctdt.pk %}">{{ ctdt.ma_nganh_ctdt }}</a></li>
+                <li class="breadcrumb-item active">Quản lý Giảng viên</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Thêm hoặc xóa giảng viên khỏi chương trình đào tạo</h3>
+        </div>
+        <div class="card-body">
+            <form method="get" class="mb-3">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="Tìm kiếm giảng viên..." value="{{ query_search }}">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-search"></i> Tìm kiếm</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="giangvien-table">
+                    <thead>
+                        <tr>
+                            <th>Mã cán bộ</th>
+                            <th>Họ và tên</th>
+                            <th>Đơn vị công tác</th>
+                            <th class="text-center">Trạng thái</th>
+                            <th class="text-center">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gv in page_obj %}
+                        <tr id="gv-row-{{ gv.pk }}">
+                            <td>{{ gv.ma_can_bo }}</td>
+                            <td>{{ gv.ho_ten }}</td>
+                            <td>{{ gv.co_quan_cong_tac.ten_don_vi|default:"N/A" }}</td>
+                            <td class="text-center">
+                                {% if gv.is_in_ctdt %}
+                                    <span class="badge badge-success">Đã thêm</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Chưa thêm</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if gv.is_in_ctdt %}
+                                    <button class="btn btn-sm btn-danger btn-toggle-gv" data-gv-pk="{{ gv.pk }}" data-action="remove">
+                                        <i class="fas fa-trash-alt"></i> Xóa khỏi CTĐT
+                                    </button>
+                                {% else %}
+                                    <button class="btn btn-sm btn-primary btn-toggle-gv" data-gv-pk="{{ gv.pk }}" data-action="add">
+                                        <i class="fas fa-plus"></i> Thêm vào CTĐT
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">Không tìm thấy giảng viên nào.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% include 'partials/_pagination.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('#giangvien-table').on('click', '.btn-toggle-gv', function() {
+        var button = $(this);
+        var gvPk = button.data('gv-pk');
+        var action = button.data('action');
+        var url = "{% url 'daotao:cap_nhat_giang_vien_ctdt' ctdt.pk %}";
+        var csrfToken = "{{ csrf_token }}";
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {
+                'giang_vien_pk': gvPk,
+                'action': action,
+                'csrfmiddlewaretoken': csrfToken
+            },
+            dataType: 'json',
+            success: function(data) {
+                if (data.status === 'success') {
+                    toastr.success(data.message);
+                    var row = $('#gv-row-' + gvPk);
+                    var statusCell = row.find('td:nth-child(4)');
+                    
+                    if (action === 'add') {
+                        button.removeClass('btn-primary').addClass('btn-danger');
+                        button.data('action', 'remove');
+                        button.html('<i class="fas fa-trash-alt"></i> Xóa khỏi CTĐT');
+                        statusCell.html('<span class="badge badge-success">Đã thêm</span>');
+                    } else {
+                        button.removeClass('btn-danger').addClass('btn-primary');
+                        button.data('action', 'add');
+                        button.html('<i class="fas fa-plus"></i> Thêm vào CTĐT');
+                        statusCell.html('<span class="badge badge-secondary">Chưa thêm</span>');
+                    }
+                } else {
+                    toastr.error(data.message || 'Có lỗi xảy ra.');
+                }
+            },
+            error: function() {
+                toastr.error('Lỗi kết nối. Vui lòng thử lại.');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

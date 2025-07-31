@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-2">
+        <div class="col-sm-6">
+            <h1>{{ page_title }}</h1>
+        </div>
+        <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+                <li class="breadcrumb-item"><a href="{% url 'daotao:index' %}">Home</a></li>
+                <li class="breadcrumb-item active">Giảng viên</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Danh sách giảng viên trong hệ thống</h3>
+            <div class="card-tools">
+                <!-- Add buttons here if needed, e.g., Add New, Import -->
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="get" class="mb-3">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="Tìm kiếm theo tên, mã cán bộ, email..." value="{{ query_search }}">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-search"></i> Tìm kiếm</button>
+                    </div>
+                </div>
+            </form>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th>Mã cán bộ</th>
+                            <th>Họ và tên</th>
+                            <th>Email</th>
+                            <th>Đơn vị công tác</th>
+                            <th>Số CTĐT tham gia</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for gv in page_obj %}
+                        <tr>
+                            <td>{{ gv.ma_can_bo }}</td>
+                            <td>{{ gv.ho_ten }}</td>
+                            <td>{{ gv.email|default:"N/A" }}</td>
+                            <td>{{ gv.co_quan_cong_tac.ten_don_vi|default:"N/A" }}</td>
+                            <td>{{ gv.so_ctdt_tham_gia }}</td>
+                            <td>
+                                <!-- Actions like view details, edit, etc. -->
+                                <a href="#" class="btn btn-sm btn-info"><i class="fas fa-eye"></i></a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">Không có giảng viên nào.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% include 'partials/_pagination.html' %}
+        </div>
+    </div>
+</div>
+{% endblock %}

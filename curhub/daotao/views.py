@@ -4,7 +4,7 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_http_methods
-from django.db.models import Q, OuterRef, Exists
+from django.db.models import Q, OuterRef, Exists, Case, When, Value, IntegerField, Count
 from django.contrib import messages
 from django.utils import timezone
 from .forms import (
@@ -17,11 +17,13 @@ from .forms import (
 from .models import (
     NganhDaoTao, ChuongTrinhDaoTao, HocPhan, ChiTietHocPhanTrongCTDT,
     LichSuThayDoiCTDT, DonViDaoTao, MucTieuDaoTao, ChuanDauRa, DanhMucKienThuc,
-    DeCuongHocPhan, NoiDungChiTietDeCuong, HinhThucDanhGia, ChuanDauRaHocPhan
+    DeCuongHocPhan, NoiDungChiTietDeCuong, HinhThucDanhGia, ChuanDauRaHocPhan,
+    GiangVien
 )
 from django.db import transaction 
 import pandas as pd
 import io
+import json
 
 def index(request):
     return redirect('daotao:danh_sach_ctdt')
@@ -93,30 +95,118 @@ def danh_sach_ctdt(request):
 @permission_required('daotao.view_chuongtrinhdaotao', raise_exception=True)
 def chi_tiet_ctdt(request, pk_ctdt):
     chuong_trinh = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
-    hoc_phan_trong_ctdt = ChiTietHocPhanTrongCTDT.objects.filter(
+    
+    # Lấy và sắp xếp danh sách học phần
+    hoc_phan_list = ChiTietHocPhanTrongCTDT.objects.filter(
         chuong_trinh_dao_tao=chuong_trinh
-    ).order_by('hoc_ky_du_kien', 'hoc_phan__ma_hoc_phan')
-    muc_tieu_dao_tao_ctdt = MucTieuDaoTao.objects.filter(chuong_trinh_dao_tao=chuong_trinh).order_by('ma_muc_tieu')
-    chuan_dau_ra_ctdt = ChuanDauRa.objects.filter(chuong_trinh_dao_tao=chuong_trinh).prefetch_related('dap_ung_muc_tieu').order_by('loai_cdr', 'ma_cdr')
+    ).select_related('hoc_phan', 'danh_muc_kien_thuc').order_by('hoc_ky_du_kien', 'hoc_phan__ma_hoc_phan')
 
-    # Group PLOs by type for the matrix display
+    # Nhóm học phần theo khối kiến thức
+    hoc_phan_theo_khoi = {}
+    hoc_phan_chua_xep_khoi = []
+    tong_tin_chi_toan_ctdt = 0
+
+    for hp in hoc_phan_list:
+        tong_tin_chi_toan_ctdt += hp.tong_so_tin_chi_apdung
+        khoi = hp.danh_muc_kien_thuc
+        if khoi is not None:
+            # Sử dụng khoi.ten_danh_muc làm key để sắp xếp theo alphabet sau này
+            if khoi.ten_danh_muc not in hoc_phan_theo_khoi:
+                hoc_phan_theo_khoi[khoi.ten_danh_muc] = {
+                    'id': khoi.id,
+                    'hoc_phan_list': [],
+                    'tong_tin_chi': 0
+                }
+            hoc_phan_theo_khoi[khoi.ten_danh_muc]['hoc_phan_list'].append(hp)
+            hoc_phan_theo_khoi[khoi.ten_danh_muc]['tong_tin_chi'] += hp.tong_so_tin_chi_apdung
+        else:
+            hoc_phan_chua_xep_khoi.append(hp)
+
+    # Sắp xếp lại dict theo key (ten_danh_muc)
+    hoc_phan_theo_khoi = dict(sorted(hoc_phan_theo_khoi.items()))
+
+    # Chuẩn bị dữ liệu cho biểu đồ tròn
+    pie_chart_labels = list(hoc_phan_theo_khoi.keys())
+    pie_chart_data = [details['tong_tin_chi'] for details in hoc_phan_theo_khoi.values()]
+
+    muc_tieu_dao_tao_ctdt = MucTieuDaoTao.objects.filter(chuong_trinh_dao_tao=chuong_trinh).order_by('ma_muc_tieu')
+    
+    # Custom ordering for PLOs
+    custom_order = Case(
+        When(loai_cdr='KT', then=Value(0)),
+        When(loai_cdr='KN', then=Value(1)),
+        When(loai_cdr='TD', then=Value(2)),
+        default=Value(3),
+        output_field=IntegerField(),
+    )
+    chuan_dau_ra_ctdt = ChuanDauRa.objects.filter(
+        chuong_trinh_dao_tao=chuong_trinh
+    ).prefetch_related('dap_ung_muc_tieu').annotate(
+        custom_order=custom_order
+    ).order_by('custom_order', 'ma_cdr')
+
+    # Group PLOs by type for the matrix display, maintaining the custom order
     plo_groups = {}
+    # Define the desired order of groups
+    group_order = ['Về kiến thức', 'Về kỹ năng', 'Về thái độ/Năng lực tự chủ và trách nhiệm', 'Khác']
+    for group_name in group_order:
+        plo_groups[group_name] = []
+
     for plo in chuan_dau_ra_ctdt:
         group_name = plo.get_loai_cdr_display()
+        # If group_name is None or not in our predefined list, default to 'Khác'
         if group_name not in plo_groups:
-            plo_groups[group_name] = []
+            group_name = 'Khác'
         
         # Create a set of related PO pks for quick lookup in the template
         plo.related_pos_pks = set(po.pk for po in plo.dap_ung_muc_tieu.all())
         plo_groups[group_name].append(plo)
+    
+    # Filter out empty groups
+    plo_groups = {k: v for k, v in plo_groups.items() if v}
+
+    # Add forms for modals
+    po_form = MucTieuDaoTaoForm()
+    plo_form = ChuanDauRaForm(ctdt=chuong_trinh)
+
+    # D. Kế hoạch giảng dạy (Tentative Teaching Plan)
+    hoc_phan_theo_hoc_ky = {}
+    hoc_phan_chua_phan_bo = []
+    for hp in hoc_phan_list:
+        hoc_ky = hp.hoc_ky_du_kien
+        if hoc_ky:
+            if hoc_ky not in hoc_phan_theo_hoc_ky:
+                hoc_phan_theo_hoc_ky[hoc_ky] = {
+                    'hoc_phan_list': [],
+                    'tong_tin_chi': 0
+                }
+            hoc_phan_theo_hoc_ky[hoc_ky]['hoc_phan_list'].append(hp)
+            hoc_phan_theo_hoc_ky[hoc_ky]['tong_tin_chi'] += hp.tong_so_tin_chi_apdung
+        else:
+            hoc_phan_chua_phan_bo.append(hp)
+    
+    # Sắp xếp dict theo key (học kỳ)
+    hoc_phan_theo_hoc_ky = dict(sorted(hoc_phan_theo_hoc_ky.items()))
+
 
     context = {
         'ctdt': chuong_trinh,
         'page_title': f"Chi tiết CTĐT: {chuong_trinh.ten_nganh_ctdt}",
-        'hoc_phan_trong_ctdt': hoc_phan_trong_ctdt,
+        'hoc_phan_theo_khoi': hoc_phan_theo_khoi,
+        'hoc_phan_chua_xep_khoi': hoc_phan_chua_xep_khoi,
+        'tong_tin_chi_toan_ctdt': tong_tin_chi_toan_ctdt,
+        'pie_chart_labels_json': json.dumps(pie_chart_labels),
+        'pie_chart_data_json': json.dumps(pie_chart_data),
         'muc_tieu_dao_tao_ctdt': muc_tieu_dao_tao_ctdt,
         'chuan_dau_ra_ctdt': chuan_dau_ra_ctdt, # Keep for simple list if needed elsewhere
         'plo_groups': plo_groups,
+        'is_draft': chuong_trinh.trang_thai == 'DRAFT',
+        'po_form': po_form,
+        'plo_form': plo_form,
+        'lich_su_thay_doi': LichSuThayDoiCTDT.objects.filter(chuong_trinh_dao_tao=chuong_trinh),
+        # Dữ liệu cho Kế hoạch giảng dạy
+        'hoc_phan_theo_hoc_ky': hoc_phan_theo_hoc_ky,
+        'hoc_phan_chua_phan_bo': hoc_phan_chua_phan_bo,
     }
     return render(request, 'daotao/chi_tiet_ctdt.html', context)
 
@@ -420,8 +510,12 @@ def them_hoc_phan_hang_loat(request, pk_ctdt):
                     chi_tiet_hp_data['hoc_ky_du_kien'] = hoc_ky_du_kien_default
                 if la_bat_buoc_default is not None:
                     chi_tiet_hp_data['la_bat_buoc'] = la_bat_buoc_default
-                # Create a form instance without the excluded fields
-                form_instance = ChiTietHocPhanTrongCTDTModelForm(data=chi_tiet_hp_data)
+
+                # Pass the full queryset of HocPhan to the form for validation
+                form_instance = ChiTietHocPhanTrongCTDTModelForm(
+                    data=chi_tiet_hp_data,
+                    hoc_phan_queryset=HocPhan.objects.all()
+                )
                 if form_instance.is_valid():
                     # Create the instance without saving to the DB
                     chi_tiet_instance = form_instance.save(commit=False)
@@ -444,9 +538,12 @@ def them_hoc_phan_hang_loat(request, pk_ctdt):
         return redirect(f"{reverse('daotao:chi_tiet_ctdt', kwargs={'pk_ctdt': ctdt.pk})}#hocphan-tab-pane")
     if not HocPhan.objects.exists():
         messages.warning(request, "Thư viện học phần trống. Vui lòng thêm học phần vào thư viện trước khi thực hiện chức năng này.")
+    
+    don_vi_list = DonViDaoTao.objects.all()
     context = {
         'ctdt': ctdt,
-        'page_title': f'Thêm Học Phần Hàng Loạt cho CTĐT: {ctdt.ten_nganh_ctdt}'
+        'page_title': f'Thêm Học Phần Hàng Loạt cho CTĐT: {ctdt.ten_nganh_ctdt}',
+        'don_vi_list': don_vi_list
     }
     return render(request, 'daotao/them_hoc_phan_hang_loat.html', context)
 
@@ -802,8 +899,41 @@ def danh_sach_hoc_phan_theo_ctdt(request, pk_ctdt):
     return HttpResponse(f"Chức năng danh sách học phần theo ctdt {pk_ctdt} chưa được triển khai.")
 
 @login_required
+@permission_required('daotao.add_chitiethocphantrongctdt', raise_exception=True)
 def them_hoc_phan_vao_ctdt(request, pk_ctdt):
-    return HttpResponse(f"Chức năng thêm học phần vào ctdt {pk_ctdt} chưa được triển khai.")
+    """
+    View để thêm một học phần (đã có trong thư viện) vào một CTĐT cụ thể.
+    """
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    
+    if ctdt.trang_thai != 'DRAFT':
+        messages.error(request, "Chỉ có thể thêm học phần khi CTĐT ở trạng thái 'Bản nháp'.")
+        return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)
+
+    if request.method == 'POST':
+        form = ChiTietHocPhanTrongCTDTModelForm(request.POST, ctdt=ctdt)
+        if form.is_valid():
+            chi_tiet_hp = form.save(commit=False)
+            chi_tiet_hp.chuong_trinh_dao_tao = ctdt
+            
+            if ChiTietHocPhanTrongCTDT.objects.filter(chuong_trinh_dao_tao=ctdt, hoc_phan=chi_tiet_hp.hoc_phan).exists():
+                messages.error(request, f"Học phần '{chi_tiet_hp.hoc_phan.ten_hoc_phan}' đã tồn tại trong chương trình đào tạo này.")
+            else:
+                chi_tiet_hp.save()
+                form.save_m2m()
+                messages.success(request, f"Đã thêm học phần '{chi_tiet_hp.hoc_phan.ten_hoc_phan}' vào chương trình đào tạo thành công.")
+                return redirect(f"{reverse('daotao:chi_tiet_ctdt', kwargs={'pk_ctdt': ctdt.pk})}#hocphan-tab-pane")
+        else:
+            messages.error(request, "Có lỗi xảy ra khi thêm học phần. Vui lòng kiểm tra lại các trường được đánh dấu.")
+    else:
+        form = ChiTietHocPhanTrongCTDTModelForm(ctdt=ctdt)
+
+    context = {
+        'form': form,
+        'ctdt': ctdt,
+        'page_title': f'Thêm Học phần vào CTĐT: {ctdt.ten_nganh_ctdt}'
+    }
+    return render(request, 'daotao/them_hoc_phan_vao_ctdt.html', context)
 
 @login_required
 @permission_required('daotao.view_chitiethocphantrongctdt', raise_exception=True)
@@ -831,7 +961,7 @@ def sua_chi_tiet_hp_trong_ctdt(request, pk_chi_tiet_hp):
         return redirect('daotao:chi_tiet_ctdt', pk_ctdt=ctdt.pk)
 
     if request.method == 'POST':
-        form = ChiTietHocPhanTrongCTDTModelForm(request.POST, instance=chi_tiet_hp)
+        form = ChiTietHocPhanTrongCTDTModelForm(request.POST, instance=chi_tiet_hp, ctdt=ctdt)
         if form.is_valid():
             form.save()
             messages.success(request, f"Đã cập nhật chi tiết cho học phần '{chi_tiet_hp.hoc_phan.ten_hoc_phan}' thành công.")
@@ -839,7 +969,7 @@ def sua_chi_tiet_hp_trong_ctdt(request, pk_chi_tiet_hp):
         else:
             messages.error(request, "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại các trường.")
     else:
-        form = ChiTietHocPhanTrongCTDTModelForm(instance=chi_tiet_hp)
+        form = ChiTietHocPhanTrongCTDTModelForm(instance=chi_tiet_hp, ctdt=ctdt)
 
     context = {
         'form': form,
@@ -1029,59 +1159,42 @@ def sua_chuan_dau_ra(request, pk_cdr):
 
 @login_required
 @permission_required('daotao.delete_chuandaura', raise_exception=True)
+@require_http_methods(["POST"])
 def xoa_chuan_dau_ra(request, pk_cdr):
-    return HttpResponse(f"Chức năng xóa chuẩn đầu ra {pk_cdr} chưa được triển khai.")
+    plo = get_object_or_404(ChuanDauRa, pk=pk_cdr)
+    if plo.chuong_trinh_dao_tao.trang_thai != 'DRAFT':
+        return JsonResponse({'status': 'error', 'message': 'Chỉ có thể xóa khi CTĐT ở trạng thái "Bản nháp".'}, status=403)
+    
+    plo.delete()
+    return JsonResponse({'status': 'success', 'message': 'Đã xóa Chuẩn Đầu Ra.'})
 
 @login_required
 @permission_required('daotao.change_muctieudaotao', raise_exception=True)
+@require_http_methods(["POST"])
 def sua_muc_tieu_dao_tao(request, pk_po):
-    muc_tieu = get_object_or_404(MucTieuDaoTao, pk=pk_po)
-    ctdt = muc_tieu.chuong_trinh_dao_tao
+    po = get_object_or_404(MucTieuDaoTao, pk=pk_po)
+    ctdt = po.chuong_trinh_dao_tao
 
     if ctdt.trang_thai != 'DRAFT':
-        messages.error(request, "Chỉ có thể sửa Mục tiêu đào tạo cho CTĐT ở trạng thái 'Bản nháp'.")
-        return redirect('daotao:chi_tiet_ctdt', pk_ctdt=ctdt.pk)
+        return JsonResponse({'status': 'error', 'message': "Chỉ có thể sửa khi CTĐT ở trạng thái 'Bản nháp'."}, status=403)
 
-    if request.method == 'POST':
-        form = MucTieuDaoTaoForm(request.POST, instance=muc_tieu)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Đã cập nhật Mục tiêu đào tạo thành công!")
-            return redirect(f"{reverse('daotao:chi_tiet_ctdt', kwargs={'pk_ctdt': ctdt.pk})}#po-tab-pane")
-        else:
-            messages.error(request, "Có lỗi xảy ra khi cập nhật. Vui lòng kiểm tra lại các trường.")
+    form = MucTieuDaoTaoForm(request.POST, instance=po)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'status': 'success', 'message': 'Đã cập nhật Mục tiêu Đào tạo thành công!'})
     else:
-        form = MucTieuDaoTaoForm(instance=muc_tieu)
-
-    context = {
-        'form': form,
-        'ctdt': ctdt,
-        'muc_tieu': muc_tieu,
-        'page_title': f'Cập nhật Mục tiêu: {muc_tieu.ma_muc_tieu}'
-    }
-    return render(request, 'daotao/sua_muc_tieu_dao_tao.html', context)
+        return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors}, status=400)
 
 @login_required
 @permission_required('daotao.delete_muctieudaotao', raise_exception=True)
+@require_http_methods(["POST"])
 def xoa_muc_tieu_dao_tao(request, pk_po):
-    muc_tieu = get_object_or_404(MucTieuDaoTao, pk=pk_po)
-    ctdt = muc_tieu.chuong_trinh_dao_tao
-
-    if ctdt.trang_thai != 'DRAFT':
-        messages.error(request, "Chỉ có thể xóa Mục tiêu đào tạo cho CTĐT ở trạng thái 'Bản nháp'.")
-        return redirect('daotao:chi_tiet_ctdt', pk_ctdt=ctdt.pk)
-
-    if request.method == 'POST':
-        muc_tieu.delete()
-        messages.success(request, f"Đã xóa thành công Mục tiêu đào tạo: {muc_tieu.ma_muc_tieu}")
-        return redirect(f"{reverse('daotao:chi_tiet_ctdt', kwargs={'pk_ctdt': ctdt.pk})}#po-tab-pane")
-
-    context = {
-        'object': muc_tieu,
-        'ctdt': ctdt,
-        'page_title': f'Xác nhận xóa Mục tiêu: {muc_tieu.ma_muc_tieu}'
-    }
-    return render(request, 'daotao/xoa_muc_tieu_dao_tao_confirm.html', context)
+    po = get_object_or_404(MucTieuDaoTao, pk=pk_po)
+    if po.chuong_trinh_dao_tao.trang_thai != 'DRAFT':
+        return JsonResponse({'status': 'error', 'message': 'Chỉ có thể xóa khi CTĐT ở trạng thái "Bản nháp".'}, status=403)
+    
+    po.delete()
+    return JsonResponse({'status': 'success', 'message': 'Đã xóa Mục tiêu Đào tạo.'})
 
 @login_required
 def get_nganh_dao_tao_options(request):
@@ -1090,6 +1203,80 @@ def get_nganh_dao_tao_options(request):
 @login_required
 def get_don_vi_dao_tao_options(request):
     return JsonResponse([], safe=False)
+
+@login_required
+def get_hoc_phan_details(request, pk_hoc_phan):
+    """
+    API endpoint to get default details for a specific HocPhan.
+    """
+    try:
+        hoc_phan = get_object_or_404(HocPhan, pk=pk_hoc_phan)
+        data = {
+            'tin_chi_ly_thuyet_apdung': hoc_phan.tin_chi_ly_thuyet_goc,
+            'tin_chi_thuc_hanh_apdung': hoc_phan.tin_chi_thuc_hanh_goc,
+            'so_gio_ly_thuyet_apdung': hoc_phan.so_gio_ly_thuyet_goc,
+            'so_gio_thuc_hanh_apdung': hoc_phan.so_gio_thuc_hanh_goc,
+            'so_gio_tu_hoc_apdung': hoc_phan.so_gio_tu_hoc_goc,
+            # Add any other fields you want to auto-populate
+        }
+        return JsonResponse(data)
+    except Http404:
+        return JsonResponse({'error': 'HocPhan not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+def search_hoc_phan_in_ctdt_api(request, pk_ctdt):
+    """
+    API endpoint for Select2 to search for courses (ChiTietHocPhanTrongCTDT)
+    within a specific curriculum (CTDT).
+    """
+    search_term = request.GET.get('q', '')
+    page = request.GET.get('page', 1)
+    
+    try:
+        ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+        
+        # Query ChiTietHocPhanTrongCTDT objects related to the specific CTDT
+        queryset = ChiTietHocPhanTrongCTDT.objects.filter(
+            chuong_trinh_dao_tao=ctdt
+        ).select_related('hoc_phan').order_by('hoc_phan__ma_hoc_phan')
+        
+        if search_term:
+            queryset = queryset.filter(
+                Q(hoc_phan__ma_hoc_phan__icontains=search_term) |
+                Q(hoc_phan__ten_hoc_phan__icontains=search_term)
+            )
+            
+        # Exclude the current course being edited, if its PK is provided
+        exclude_pk = request.GET.get('exclude_pk')
+        if exclude_pk:
+            queryset = queryset.exclude(pk=exclude_pk)
+
+        paginator = Paginator(queryset, 30)
+        try:
+            results_page = paginator.page(page)
+        except (EmptyPage, PageNotAnInteger):
+            results_page = paginator.page(paginator.num_pages)
+
+        results = [
+            {
+                'id': chi_tiet.pk,
+                'text': f"{chi_tiet.hoc_phan.ma_hoc_phan} - {chi_tiet.hoc_phan.ten_hoc_phan}"
+            }
+            for chi_tiet in results_page
+        ]
+
+        return JsonResponse({
+            'results': results,
+            'pagination': {'more': results_page.has_next()}
+        })
+
+    except ChuongTrinhDaoTao.DoesNotExist:
+        return JsonResponse({'results': [], 'pagination': {'more': False}}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 # --- PLACEHOLDER FUNCTIONS END ---
 
@@ -1472,3 +1659,282 @@ def doi_sanh_ctdt(request):
         'page_title': 'Đối sánh Chương trình Đào tạo'
     }
     return render(request, 'daotao/doi_sanh_ctdt.html', context)
+
+@login_required
+@require_http_methods(["POST"])
+@permission_required('daotao.add_muctieudaotao', raise_exception=True)
+def api_them_po(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    if ctdt.trang_thai != 'DRAFT':
+        return JsonResponse({'status': 'error', 'message': "Chỉ có thể thêm khi CTĐT ở trạng thái 'Bản nháp'."}, status=403)
+    
+    form = MucTieuDaoTaoForm(request.POST)
+    if form.is_valid():
+        po = form.save(commit=False)
+        po.chuong_trinh_dao_tao = ctdt
+        po.save()
+        return JsonResponse({'status': 'success', 'message': 'Đã thêm Mục tiêu Đào tạo thành công!'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors}, status=400)
+
+@login_required
+def api_get_po_details(request, pk_po):
+    """
+    API endpoint to get details of a specific MucTieuDaoTao (PO) as JSON.
+    """
+    po = get_object_or_404(MucTieuDaoTao, pk=pk_po)
+    data = {
+        'pk': po.pk,
+        'ma_muc_tieu': po.ma_muc_tieu,
+        'noi_dung': po.noi_dung,
+    }
+    return JsonResponse(data)
+
+@login_required
+@require_http_methods(["POST"])
+@permission_required('daotao.add_chuandaura', raise_exception=True)
+def api_them_plo(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    if ctdt.trang_thai != 'DRAFT':
+        return JsonResponse({'status': 'error', 'message': "Chỉ có thể thêm khi CTĐT ở trạng thái 'Bản nháp'."}, status=403)
+    
+    form = ChuanDauRaForm(request.POST, ctdt=ctdt)
+    if form.is_valid():
+        plo = form.save(commit=False)
+        plo.chuong_trinh_dao_tao = ctdt
+        plo.save()
+        form.save_m2m()
+        return JsonResponse({'status': 'success', 'message': 'Đã thêm Chuẩn Đầu ra thành công!'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors}, status=400)
+
+@login_required
+def api_get_plo_details(request, pk_cdr):
+    """
+    API endpoint to get details of a specific ChuanDauRa (PLO) as JSON.
+    """
+    plo = get_object_or_404(ChuanDauRa, pk=pk_cdr)
+    data = {
+        'pk': plo.pk,
+        'ma_cdr': plo.ma_cdr,
+        'noi_dung': plo.noi_dung,
+        'loai_cdr': plo.loai_cdr,
+        'dap_ung_muc_tieu': list(plo.dap_ung_muc_tieu.values_list('pk', flat=True))
+    }
+    return JsonResponse(data)
+
+@login_required
+def api_get_de_cuong_chi_tiet(request, pk_hoc_phan):
+    """
+    API endpoint to get the detailed content of the active syllabus for a course.
+    """
+    # Find the active syllabus for the given course
+    de_cuong = get_object_or_404(
+        DeCuongHocPhan.objects.select_related('hoc_phan', 'hoc_phan__don_vi_quan_ly_goc'), 
+        hoc_phan__pk=pk_hoc_phan, 
+        la_phien_ban_hien_hanh=True
+    )
+    
+    hoc_phan = de_cuong.hoc_phan
+
+    # Serialize the main syllabus data
+    data = {
+        'ten_hoc_phan': hoc_phan.ten_hoc_phan,
+        'ma_hoc_phan': hoc_phan.ma_hoc_phan,
+        'so_tin_chi': hoc_phan.tong_so_tin_chi_goc,
+        'don_vi_quan_ly': hoc_phan.don_vi_quan_ly_goc.ten_don_vi if hoc_phan.don_vi_quan_ly_goc else "N/A",
+        'ten_de_cuong_phien_ban': de_cuong.ten_de_cuong_phien_ban,
+        'ngay_ban_hanh': de_cuong.ngay_ban_hanh.strftime('%d/%m/%Y'),
+        'muc_tieu_hoc_phan': de_cuong.muc_tieu_hoc_phan,
+        'tom_tat_noi_dung': de_cuong.tom_tat_noi_dung,
+        'phuong_phap_day_hoc': de_cuong.phuong_phap_day_hoc,
+        'nhiem_vu_sinh_vien': de_cuong.nhiem_vu_sinh_vien,
+        'thang_diem_danh_gia': de_cuong.thang_diem_danh_gia,
+        'tai_lieu_hoc_tap': de_cuong.tai_lieu_hoc_tap,
+        'cac_yeu_cau_khac': de_cuong.cac_yeu_cau_khac,
+        'chuan_dau_ra': [],
+        'noi_dung_chi_tiet': [],
+        'hinh_thuc_danh_gia': []
+    }
+
+    # Serialize related CLOs (ChuanDauRaHocPhan)
+    clos = de_cuong.chuan_dau_ra_cua_de_cuong.all().order_by('ma_clo')
+    for clo in clos:
+        data['chuan_dau_ra'].append({
+            'ma_clo': clo.ma_clo,
+            'noi_dung': clo.noi_dung,
+            'muc_do_bloom': clo.get_muc_do_bloom_display()
+        })
+
+    # Serialize detailed content (NoiDungChiTietDeCuong)
+    noi_dungs = de_cuong.noi_dung_chi_tiet.prefetch_related('chuan_dau_ra_lien_quan').order_by('tuan_hoc_hoac_chu_de')
+    for nd in noi_dungs:
+        data['noi_dung_chi_tiet'].append({
+            'tuan_hoc_hoac_chu_de': nd.tuan_hoc_hoac_chu_de,
+            'noi_dung_giang_day': nd.noi_dung_giang_day,
+            'so_gio_ly_thuyet': nd.so_gio_ly_thuyet,
+            'so_gio_thuc_hanh': nd.so_gio_thuc_hanh,
+            'so_gio_tu_hoc': nd.so_gio_tu_hoc,
+            'chuan_dau_ra_lien_quan': [clo.ma_clo for clo in nd.chuan_dau_ra_lien_quan.all()]
+        })
+
+    # Serialize evaluation methods (HinhThucDanhGia)
+    danh_gias = de_cuong.hinh_thuc_danh_gia.prefetch_related('chuan_dau_ra_danh_gia').order_by('loai_danh_gia')
+    for dg in danh_gias:
+        data['hinh_thuc_danh_gia'].append({
+            'ten_hinh_thuc': dg.ten_hinh_thuc,
+            'loai_danh_gia': dg.get_loai_danh_gia_display(),
+            'ty_le_diem': dg.ty_le_diem,
+            'chuan_dau_ra_danh_gia': [clo.ma_clo for clo in dg.chuan_dau_ra_danh_gia.all()]
+        })
+
+    return JsonResponse(data)
+
+import re
+
+@login_required
+def api_program_flowchart_data(request, pk_ctdt):
+    """
+    API endpoint to provide data for the Mermaid.js program flowchart.
+    """
+    def clean_mermaid_id(text):
+        # Remove any character that is not a letter, number, or underscore
+        return re.sub(r'[^a-zA-Z0-9_]', '', text)
+
+    try:
+        ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+        details = ChiTietHocPhanTrongCTDT.objects.filter(
+            chuong_trinh_dao_tao=ctdt
+        ).select_related('hoc_phan', 'danh_muc_kien_thuc').prefetch_related(
+            'hoc_phan_tien_quyet__hoc_phan', 'hoc_phan_song_hanh__hoc_phan'
+        )
+
+        nodes = []
+        edges = []
+        
+        # Use a set to keep track of added nodes to avoid duplicates
+        added_nodes = set()
+
+        for detail in details:
+            # Use the original ma_hoc_phan for mapping, but a cleaned version for Mermaid ID
+            original_hp_id = detail.hoc_phan.ma_hoc_phan
+            hp_mermaid_id = clean_mermaid_id(original_hp_id)
+            
+            if hp_mermaid_id not in added_nodes:
+                nodes.append({
+                    'id': hp_mermaid_id,
+                    'original_id': original_hp_id,
+                    'name': detail.hoc_phan.ten_hoc_phan,
+                    'tin_chi': detail.tong_so_tin_chi_apdung,
+                    'khoi_kien_thuc': detail.danh_muc_kien_thuc.ten_danh_muc if detail.danh_muc_kien_thuc else "Chưa phân loại"
+                })
+                added_nodes.add(hp_mermaid_id)
+
+            # Add prerequisite edges
+            for tien_quyet_detail in detail.hoc_phan_tien_quyet.all():
+                source_id = clean_mermaid_id(tien_quyet_detail.hoc_phan.ma_hoc_phan)
+                edges.append({
+                    'source': source_id,
+                    'target': hp_mermaid_id,
+                    'type': 'tienquyet'
+                })
+
+            # Add concurrent edges
+            for song_hanh_detail in detail.hoc_phan_song_hanh.all():
+                source_id = clean_mermaid_id(song_hanh_detail.hoc_phan.ma_hoc_phan)
+                edges.append({
+                    'source': source_id,
+                    'target': hp_mermaid_id,
+                    'type': 'songhanh'
+                })
+
+        return JsonResponse({'nodes': nodes, 'edges': edges})
+
+    except ChuongTrinhDaoTao.DoesNotExist:
+        return JsonResponse({'error': 'Program not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+#region Giảng viên
+@login_required
+@permission_required('daotao.view_giangvien', raise_exception=True)
+def danh_sach_giang_vien(request):
+    giang_vien_list = GiangVien.objects.annotate(
+        so_ctdt_tham_gia=Count('chuong_trinh_tham_gia')
+    ).order_by('ten', 'ho')
+
+    query_search = request.GET.get('q', '')
+    if query_search:
+        giang_vien_list = giang_vien_list.filter(
+            Q(ho__icontains=query_search) |
+            Q(ten__icontains=query_search) |
+            Q(ma_can_bo__icontains=query_search) |
+            Q(email__icontains=query_search)
+        )
+
+    paginator = Paginator(giang_vien_list, 25)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'page_title': 'Danh sách Giảng viên',
+        'query_search': query_search,
+    }
+    return render(request, 'daotao/danh_sach_giang_vien.html', context)
+
+@login_required
+@permission_required('daotao.change_chuongtrinhdaotao', raise_exception=True)
+def quan_ly_giang_vien_ctdt(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    
+    # Lấy danh sách tất cả giảng viên, và đánh dấu những ai đã có trong CTĐT
+    giang_vien_list = GiangVien.objects.annotate(
+        is_in_ctdt=Exists(ctdt.giang_vien_tham_gia.filter(pk=OuterRef('pk')))
+    ).order_by('-is_in_ctdt', 'ten', 'ho')
+
+    query_search = request.GET.get('q', '')
+    if query_search:
+        giang_vien_list = giang_vien_list.filter(
+            Q(ho__icontains=query_search) |
+            Q(ten__icontains=query_search) |
+            Q(ma_can_bo__icontains=query_search)
+        )
+
+    paginator = Paginator(giang_vien_list, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'ctdt': ctdt,
+        'page_obj': page_obj,
+        'page_title': f'Quản lý Giảng viên cho CTĐT: {ctdt.ten_nganh_ctdt}',
+        'query_search': query_search,
+    }
+    return render(request, 'daotao/quan_ly_giang_vien_ctdt.html', context)
+
+@login_required
+@require_http_methods(["POST"])
+@permission_required('daotao.change_chuongtrinhdaotao', raise_exception=True)
+def cap_nhat_giang_vien_ctdt(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    giang_vien_pk = request.POST.get('giang_vien_pk')
+    action = request.POST.get('action')
+
+    if not giang_vien_pk or not action:
+        return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.'}, status=400)
+
+    giang_vien = get_object_or_404(GiangVien, pk=giang_vien_pk)
+
+    if action == 'add':
+        ctdt.giang_vien_tham_gia.add(giang_vien)
+        message = f"Đã thêm giảng viên {giang_vien.ho_ten} vào chương trình."
+    elif action == 'remove':
+        ctdt.giang_vien_tham_gia.remove(giang_vien)
+        message = f"Đã xóa giảng viên {giang_vien.ho_ten} khỏi chương trình."
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Hành động không hợp lệ.'}, status=400)
+
+    return JsonResponse({'status': 'success', 'message': message})
+
+#endregion

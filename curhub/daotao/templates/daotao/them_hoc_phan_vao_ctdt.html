@@ -1,118 +1,196 @@
-{% extends "daotao/base.html" %}
+{% extends 'base.html' %}
+{% load static %}
+{% load form_tags %}
 
-{% block daotao_title %}Thêm Học Phần vào CTĐT{% endblock %}
+{% block title %}{{ page_title }}{% endblock %}
 
-{% block daotao_page_title %}{{ page_title }}{% endblock %}
-
-{% block daotao_breadcrumb_items %}
-    <li class="breadcrumb-item"><a href="{% url 'daotao:danh_sach_ctdt' %}">Quản lý CTĐT</a></li>
-    <li class="breadcrumb-item"><a href="{% url 'daotao:chi_tiet_ctdt' pk_ctdt=ctdt.pk %}">{{ ctdt.ten_nganh_ctdt }}</a></li>
-    <li class="breadcrumb-item active">Thêm Học phần</li>
+{% block breadcrumb %}
+<div class="col-sm-6">
+    <h1 class="m-0">{{ page_title }}</h1>
+</div>
+<div class="col-sm-6">
+    <ol class="breadcrumb float-sm-right">
+        <li class="breadcrumb-item"><a href="{% url 'daotao:index' %}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'daotao:danh_sach_ctdt' %}">Danh sách CTĐT</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'daotao:chi_tiet_ctdt' ctdt.pk %}">{{ ctdt.ten_nganh_ctdt }}</a></li>
+        <li class="breadcrumb-item active">Thêm học phần</li>
+    </ol>
+</div>
 {% endblock %}
 
-{% block daotao_content %}
+{% block content %}
+<div class="card card-info">
+    <div class="card-header">
+        <h3 class="card-title"><i class="fas fa-info-circle"></i> Hướng dẫn</h3>
+    </div>
+    <div class="card-body">
+        <p>Trang này cho phép bạn thêm một học phần cụ thể vào chương trình đào tạo. Vui lòng làm theo các bước sau:</p>
+        <ol>
+            <li><strong>Tìm và Chọn học phần:</strong>
+                <ul>
+                    <li>Sử dụng ô "Học phần" để tìm kiếm theo mã hoặc tên học phần. Bạn cần gõ ít nhất một ký tự để bắt đầu tìm kiếm.</li>
+                    <li>Chọn học phần mong muốn từ danh sách kết quả.</li>
+                </ul>
+            </li>
+            <li><strong>Tự động điền thông tin:</strong>
+                <ul>
+                    <li>Sau khi bạn chọn một học phần, các thông tin về tín chỉ và số giờ sẽ được tự động điền vào biểu mẫu với các giá trị mặc định của học phần đó.</li>
+                </ul>
+            </li>
+            <li><strong>Kiểm tra và Điều chỉnh thông tin:</strong>
+                <ul>
+                    <li>Xem lại tất cả các trường thông tin đã được điền.</li>
+                    <li>Bạn có thể và nên điều chỉnh các giá trị (ví dụ: học kỳ dự kiến, loại học phần, số tín chỉ/giờ áp dụng cho CTĐT này) cho phù hợp với yêu cầu của chương trình đào tạo.</li>
+                </ul>
+            </li>
+            <li><strong>Lưu lại:</strong>
+                <ul>
+                    <li>Sau khi đã điền đầy đủ và chính xác các thông tin, nhấn nút <strong>"Lưu lại"</strong> ở cuối trang để hoàn tất việc thêm học phần.</li>
+                </ul>
+            </li>
+        </ol>
+        <p class="font-weight-bold text-danger">Lưu ý: Hệ thống sẽ không cho phép thêm nếu học phần này đã tồn tại trong chương trình đào tạo.</p>
+    </div>
+</div>
+
 <div class="card card-primary">
     <div class="card-header">
-        <h3 class="card-title">Điền thông tin học phần</h3>
+        <h3 class="card-title">Điền thông tin chi tiết của học phần trong CTĐT cho <strong>{{ ctdt.ten_nganh_ctdt }}</strong></h3>
     </div>
     <form method="post">
         {% csrf_token %}
         <div class="card-body">
-            {% if form.non_field_errors %}
-                <div class="alert alert-danger">
-                    {{ form.non_field_errors }}
+            {% for field in form %}
+                <div class="form-group">
+                    {{ field.label_tag }}
+                    {{ field|add_class:"form-control" }}
+                    {% if field.help_text %}
+                        <small class="form-text text-muted">{{ field.help_text }}</small>
+                    {% endif %}
+                    {% for error in field.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
                 </div>
-            {% endif %}
-            
-            <div class="form-group">
-                <label for="{{ form.hoc_phan.id_for_label }}">Học phần</label>
-                {{ form.hoc_phan }}
-                {% if form.hoc_phan.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.hoc_phan.errors|join:", " }}
-                    </div>
-                {% endif %}
-            </div>
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="{{ form.hoc_ky_du_kien.id_for_label }}">Học kỳ dự kiến</label>
-                        {{ form.hoc_ky_du_kien }}
-                        {% if form.hoc_ky_du_kien.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.hoc_ky_du_kien.errors|join:", " }}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="{{ form.la_bat_buoc.id_for_label }}">Là học phần bắt buộc?</label>
-                        {{ form.la_bat_buoc }}
-                        {% if form.la_bat_buoc.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.la_bat_buoc.errors|join:", " }}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="{{ form.tin_chi_ly_thuyet_apdung.id_for_label }}">Tín chỉ lý thuyết (áp dụng)</label>
-                        {{ form.tin_chi_ly_thuyet_apdung }}
-                        <small class="form-text text-muted">Để trống để sử dụng giá trị gốc từ thư viện học phần.</small>
-                        {% if form.tin_chi_ly_thuyet_apdung.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.tin_chi_ly_thuyet_apdung.errors|join:", " }}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label for="{{ form.tin_chi_thuc_hanh_apdung.id_for_label }}">Tín chỉ thực hành (áp dụng)</label>
-                        {{ form.tin_chi_thuc_hanh_apdung }}
-                        <small class="form-text text-muted">Để trống để sử dụng giá trị gốc từ thư viện học phần.</small>
-                        {% if form.tin_chi_thuc_hanh_apdung.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ form.tin_chi_thuc_hanh_apdung.errors|join:", " }}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="{{ form.ghi_chu_chi_tiet_hp.id_for_label }}">Ghi chú</label>
-                {{ form.ghi_chu_chi_tiet_hp }}
-                {% if form.ghi_chu_chi_tiet_hp.errors %}
-                    <div class="invalid-feedback d-block">
-                        {{ form.ghi_chu_chi_tiet_hp.errors|join:", " }}
-                    </div>
-                {% endif %}
-            </div>
+            {% endfor %}
         </div>
         <div class="card-footer">
-            <button type="submit" class="btn btn-primary">Lưu Học phần</button>
-            <a href="{% url 'daotao:chi_tiet_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-secondary">Hủy</a>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-save"></i> Lưu lại
+            </button>
+            <a href="{% url 'daotao:chi_tiet_ctdt' ctdt.pk %}" class="btn btn-secondary">
+                <i class="fas fa-times"></i> Hủy bỏ
+            </a>
         </div>
     </form>
 </div>
 {% endblock %}
 
-{% block daotao_custom_scripts %}
+{% block extra_js %}
+<script src="{% static 'adminlte/plugins/select2/js/select2.full.min.js' %}"></script>
 <script>
 $(document).ready(function() {
-    // Initialize Select2 for the course selection dropdown
-    $('#{{ form.hoc_phan.id_for_label }}').select2({
+    // --- Initialize standard Select2 fields ---
+    $('.select2').select2({
+        theme: 'bootstrap4'
+    });
+
+    // --- Main HocPhan Selection (AJAX for all courses in library) ---
+    $('#id_hoc_phan').select2({
         theme: 'bootstrap4',
-        placeholder: "Chọn một học phần",
-        allowClear: true
+        placeholder: "Chọn hoặc tìm kiếm học phần từ thư viện",
+        allowClear: true,
+        ajax: {
+            url: "{% url 'daotao:search_hoc_phan_api' %}",
+            dataType: 'json',
+            delay: 250,
+            data: function (params) {
+                return { q: params.term, page: params.page };
+            },
+            processResults: function (data, params) {
+                params.page = params.page || 1;
+                return {
+                    results: data.results,
+                    pagination: { more: data.pagination.more }
+                };
+            },
+            cache: true
+        },
+        minimumInputLength: 1,
+    });
+
+    // --- Prerequisite & Concurrent Selections (AJAX for courses within this CTDT) ---
+    $('.select2-ajax-ctdt').each(function() {
+        var ctdtPk = $(this).data('ctdt-pk');
+        if (!ctdtPk) {
+            console.error("CTDT PK not found for AJAX select2 field.");
+            return;
+        }
+        
+        // The URL for searching courses within the specific CTDT
+        var ajaxUrl = "{% url 'daotao:search_hoc_phan_in_ctdt_api' pk_ctdt=0 %}".replace('0', ctdtPk);
+        
+        $(this).select2({
+            theme: 'bootstrap4',
+            placeholder: "Tìm kiếm học phần trong CTĐT này",
+            allowClear: true,
+            multiple: true,
+            ajax: {
+                url: ajaxUrl,
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        q: params.term, // search term
+                        page: params.page,
+                        // Exclude the current course from the list of choices
+                        exclude_pk: '{{ chi_tiet_hp.pk|default_if_none:"" }}'
+                    };
+                },
+                processResults: function (data, params) {
+                    params.page = params.page || 1;
+                    return {
+                        results: data.results,
+                        pagination: { more: data.pagination.more }
+                    };
+                },
+                cache: true
+            },
+            minimumInputLength: 1,
+        });
+    });
+
+    // --- Auto-populate form on main course selection ---
+    $('#id_hoc_phan').on('select2:select', function (e) {
+        var hocPhanId = e.params.data.id;
+        if (hocPhanId) {
+            var url = "{% url 'daotao:get_hoc_phan_details' pk_hoc_phan=0 %}".replace('0', hocPhanId);
+            $.ajax({
+                url: url,
+                success: function(data) {
+                    $('#id_tin_chi_ly_thuyet_apdung').val(data.tin_chi_ly_thuyet_apdung);
+                    $('#id_tin_chi_thuc_hanh_apdung').val(data.tin_chi_thuc_hanh_apdung);
+                    $('#id_so_gio_ly_thuyet_apdung').val(data.so_gio_ly_thuyet_apdung);
+                    $('#id_so_gio_thuc_hanh_apdung').val(data.so_gio_thuc_hanh_apdung);
+                    $('#id_so_gio_tu_hoc_apdung').val(data.so_gio_tu_hoc_apdung);
+                },
+                error: function() {
+                    console.error("Lỗi khi tải chi tiết học phần.");
+                    // Clear the fields if the API call fails
+                    $('#id_tin_chi_ly_thuyet_apdung, #id_tin_chi_thuc_hanh_apdung, #id_so_gio_ly_thuyet_apdung, #id_so_gio_thuc_hanh_apdung, #id_so_gio_tu_hoc_apdung').val('');
+                }
+            });
+        }
+    });
+
+    // --- Clear fields on unselect ---
+    $('#id_hoc_phan').on('select2:unselect', function (e) {
+        $('#id_tin_chi_ly_thuyet_apdung, #id_tin_chi_thuc_hanh_apdung, #id_so_gio_ly_thuyet_apdung, #id_so_gio_thuc_hanh_apdung, #id_so_gio_tu_hoc_apdung').val('');
     });
 });
 </script>
+{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'adminlte/plugins/select2/css/select2.min.css' %}">
+<link rel="stylesheet" href="{% static 'adminlte/plugins/select2-bootstrap4-theme/select2-bootstrap4.min.css' %}">
 {% endblock %}
