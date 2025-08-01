@@ -1,0 +1,41 @@
+{% for gv in giang_vien_da_tham_gia %}
+<li class="list-group-item" id="assigned-lecturer-{{ gv.pk }}">
+    <div class="d-flex justify-content-between align-items-center">
+        <div class="gv-details">
+            <strong>{{ gv.ho_ten }}</strong><br>
+            <small class="text-muted">{{ gv.trinh_do_dao_tao|default:'N/A' }}</small><br>
+            <small class="text-muted"><i class="fas fa-envelope mr-1"></i>{{ gv.email|default:'N/A' }}</small><br>
+            <small class="text-muted"><i class="fas fa-building mr-1"></i>{{ gv.co_quan_cong_tac.ten_don_vi|default:'N/A' }}</small>
+        </div>
+        <div>
+            {% if perms.daotao.change_chuongtrinhdaotao and is_draft %}
+            <button class="btn btn-info btn-sm btn-phan-cong" data-gv-pk="{{ gv.pk }}" data-gv-name="{{ gv.ho_ten }}">
+                <i class="fas fa-tasks"></i> Phân công
+            </button>
+            <button class="btn btn-danger btn-sm btn-remove-gv" data-gv-pk="{{ gv.pk }}">
+                <i class="fas fa-trash"></i> Xóa
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    <div class="assigned-courses mt-2 pl-3" id="assigned-courses-{{ gv.pk }}">
+        {% if gv.phan_cong_trong_ctdt %}
+            <ul class="list-unstyled">
+            {% for phan_cong in gv.phan_cong_trong_ctdt %}
+                <li>
+                    <small>
+                        <i class="fas fa-book-reader text-muted"></i>
+                        <strong>{{ phan_cong.chi_tiet_hoc_phan.hoc_phan.ten_hoc_phan }}</strong>: 
+                        <span class="badge badge-secondary">{{ phan_cong.get_vai_tro_display }}</span>
+                    </small>
+                </li>
+            {% endfor %}
+            </ul>
+        {% else %}
+            <small class="text-muted font-italic">Chưa được phân công môn học nào.</small>
+        {% endif %}
+    </div>
+</li>
+{% empty %}
+<li class="list-group-item">Chưa có giảng viên nào được thêm vào chương trình.</li>
+{% endfor %}

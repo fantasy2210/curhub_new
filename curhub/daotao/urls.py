@@ -76,4 +76,9 @@ urlpatterns = [
     path('giang-vien/danh-sach/', views.danh_sach_giang_vien, name='danh_sach_giang_vien'),
     path('ctdt/<int:pk_ctdt>/quan-ly-giang-vien/', views.quan_ly_giang_vien_ctdt, name='quan_ly_giang_vien_ctdt'),
     path('ctdt/<int:pk_ctdt>/cap-nhat-giang-vien/', views.cap_nhat_giang_vien_ctdt, name='cap_nhat_giang_vien_ctdt'),
+    path('ctdt/<int:pk_ctdt>/load-giang-vien-tab/', views.load_giang_vien_tab, name='load_giang_vien_tab'),
+    path('api/ctdt/<int:pk_ctdt>/search-giang-vien/', views.api_search_giang_vien_chua_tham_gia, name='api_search_giang_vien_chua_tham_gia'),
+    path('api/ctdt/<int:pk_ctdt>/get-assigned-giang-vien/', views.api_get_giang_vien_da_tham_gia, name='api_get_giang_vien_da_tham_gia'),
+    path('api/ctdt/<int:pk_ctdt>/giang-vien/<int:pk_gv>/phan-cong-form/', views.api_get_phan_cong_form, name='api_get_phan_cong_form'),
+    path('api/ctdt/<int:pk_ctdt>/luu-phan-cong/', views.api_luu_phan_cong, name='api_luu_phan_cong'),
 ]

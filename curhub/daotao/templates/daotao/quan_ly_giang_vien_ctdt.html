@@ -25,61 +25,18 @@
             <h3 class="card-title">Thêm hoặc xóa giảng viên khỏi chương trình đào tạo</h3>
         </div>
         <div class="card-body">
-            <form method="get" class="mb-3">
+            <form method="get" class="mb-3" onsubmit="return false;">
                 <div class="input-group">
-                    <input type="text" name="q" class="form-control" placeholder="Tìm kiếm giảng viên..." value="{{ query_search }}">
+                    <input type="text" id="giangvien-search-input" name="q" class="form-control" placeholder="Tìm kiếm giảng viên..." value="{{ query_search }}">
                     <div class="input-group-append">
-                        <button class="btn btn-outline-secondary" type="submit"><i class="fas fa-search"></i> Tìm kiếm</button>
+                        <button class="btn btn-outline-secondary" type="button"><i class="fas fa-search"></i></button>
                     </div>
                 </div>
             </form>
 
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover" id="giangvien-table">
-                    <thead>
-                        <tr>
-                            <th>Mã cán bộ</th>
-                            <th>Họ và tên</th>
-                            <th>Đơn vị công tác</th>
-                            <th class="text-center">Trạng thái</th>
-                            <th class="text-center">Hành động</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for gv in page_obj %}
-                        <tr id="gv-row-{{ gv.pk }}">
-                            <td>{{ gv.ma_can_bo }}</td>
-                            <td>{{ gv.ho_ten }}</td>
-                            <td>{{ gv.co_quan_cong_tac.ten_don_vi|default:"N/A" }}</td>
-                            <td class="text-center">
-                                {% if gv.is_in_ctdt %}
-                                    <span class="badge badge-success">Đã thêm</span>
-                                {% else %}
-                                    <span class="badge badge-secondary">Chưa thêm</span>
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {% if gv.is_in_ctdt %}
-                                    <button class="btn btn-sm btn-danger btn-toggle-gv" data-gv-pk="{{ gv.pk }}" data-action="remove">
-                                        <i class="fas fa-trash-alt"></i> Xóa khỏi CTĐT
-                                    </button>
-                                {% else %}
-                                    <button class="btn btn-sm btn-primary btn-toggle-gv" data-gv-pk="{{ gv.pk }}" data-action="add">
-                                        <i class="fas fa-plus"></i> Thêm vào CTĐT
-                                    </button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="5" class="text-center">Không tìm thấy giảng viên nào.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            <div id="giangvien-list-container">
+                {% include 'daotao/partials/_quan_ly_giang_vien_list.html' %}
             </div>
-            
-            {% include 'partials/_pagination.html' %}
         </div>
     </div>
 </div>
@@ -88,7 +45,47 @@
 {% block extra_js %}
 <script>
 $(document).ready(function() {
-    $('#giangvien-table').on('click', '.btn-toggle-gv', function() {
+    var searchTimeout;
+    var ctdtPk = "{{ ctdt.pk }}";
+    var searchUrl = "{% url 'daotao:quan_ly_giang_vien_ctdt' 0 %}".replace('0', ctdtPk);
+
+    function fetchGiangVien(page, query) {
+        var data = {};
+        if (page) data.page = page;
+        if (query) data.q = query;
+
+        $.ajax({
+            url: searchUrl,
+            type: 'GET',
+            data: data,
+            success: function(response) {
+                $('#giangvien-list-container').html(response);
+            },
+            error: function() {
+                toastr.error('Lỗi khi tìm kiếm. Vui lòng thử lại.');
+            }
+        });
+    }
+
+    // Real-time search with debounce
+    $('#giangvien-search-input').on('keyup', function() {
+        clearTimeout(searchTimeout);
+        var searchTerm = $(this).val();
+        searchTimeout = setTimeout(function() {
+            fetchGiangVien(1, searchTerm);
+        }, 300); // 300ms delay
+    });
+
+    // Handle pagination clicks
+    $(document).on('click', '.pagination a', function(e) {
+        e.preventDefault();
+        var page = $(this).attr('href').split('page=')[1];
+        var query = $('#giangvien-search-input').val();
+        fetchGiangVien(page, query);
+    });
+    
+    // Handle add/remove lecturer actions
+    $('#giangvien-list-container').on('click', '.btn-toggle-gv', function() {
         var button = $(this);
         var gvPk = button.data('gv-pk');
         var action = button.data('action');

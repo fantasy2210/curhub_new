@@ -1,0 +1,15 @@
+{% if gv.phan_cong_trong_ctdt %}
+    <ul class="list-unstyled">
+    {% for phan_cong in gv.phan_cong_trong_ctdt %}
+        <li>
+            <small>
+                <i class="fas fa-book-reader text-muted"></i>
+                <strong>{{ phan_cong.chi_tiet_hoc_phan.hoc_phan.ten_hoc_phan }}</strong>: 
+                <span class="badge badge-secondary">{{ phan_cong.get_vai_tro_display }}</span>
+            </small>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <small class="text-muted font-italic">Chưa được phân công môn học nào.</small>
+{% endif %}

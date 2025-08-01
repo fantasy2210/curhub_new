@@ -5,6 +5,7 @@ from django.http import HttpResponse, JsonResponse
 from django.contrib.auth.decorators import login_required, permission_required
 from django.views.decorators.http import require_http_methods
 from django.db.models import Q, OuterRef, Exists, Case, When, Value, IntegerField, Count
+from django.db import models
 from django.contrib import messages
 from django.utils import timezone
 from .forms import (
@@ -18,9 +19,10 @@ from .models import (
     NganhDaoTao, ChuongTrinhDaoTao, HocPhan, ChiTietHocPhanTrongCTDT,
     LichSuThayDoiCTDT, DonViDaoTao, MucTieuDaoTao, ChuanDauRa, DanhMucKienThuc,
     DeCuongHocPhan, NoiDungChiTietDeCuong, HinhThucDanhGia, ChuanDauRaHocPhan,
-    GiangVien
+    GiangVien, PhanCongGiangDay
 )
-from django.db import transaction 
+from django.db import transaction
+from django.template.loader import render_to_string
 import pandas as pd
 import io
 import json
@@ -187,7 +189,6 @@ def chi_tiet_ctdt(request, pk_ctdt):
     
     # Sắp xếp dict theo key (học kỳ)
     hoc_phan_theo_hoc_ky = dict(sorted(hoc_phan_theo_hoc_ky.items()))
-
 
     context = {
         'ctdt': chuong_trinh,
@@ -1888,7 +1889,6 @@ def danh_sach_giang_vien(request):
 def quan_ly_giang_vien_ctdt(request, pk_ctdt):
     ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     
-    # Lấy danh sách tất cả giảng viên, và đánh dấu những ai đã có trong CTĐT
     giang_vien_list = GiangVien.objects.annotate(
         is_in_ctdt=Exists(ctdt.giang_vien_tham_gia.filter(pk=OuterRef('pk')))
     ).order_by('-is_in_ctdt', 'ten', 'ho')
@@ -1911,6 +1911,10 @@ def quan_ly_giang_vien_ctdt(request, pk_ctdt):
         'page_title': f'Quản lý Giảng viên cho CTĐT: {ctdt.ten_nganh_ctdt}',
         'query_search': query_search,
     }
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'daotao/partials/_quan_ly_giang_vien_list.html', context)
+
     return render(request, 'daotao/quan_ly_giang_vien_ctdt.html', context)
 
 @login_required
@@ -1925,16 +1929,198 @@ def cap_nhat_giang_vien_ctdt(request, pk_ctdt):
         return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.'}, status=400)
 
     giang_vien = get_object_or_404(GiangVien, pk=giang_vien_pk)
+    is_draft = ctdt.trang_thai == 'DRAFT'
 
     if action == 'add':
-        ctdt.giang_vien_tham_gia.add(giang_vien)
-        message = f"Đã thêm giảng viên {giang_vien.ho_ten} vào chương trình."
+        # This action is now optimistic on the frontend. 
+        # We don't create a dummy assignment anymore.
+        # The lecturer will be formally linked when an actual assignment is made.
+        message = f"Đã chuyển giảng viên {giang_vien.ho_ten} sang cột đã tham gia. Vui lòng phân công cụ thể."
+        
+        # Manually add the attribute that the template expects
+        giang_vien.phan_cong_trong_ctdt = []
+
+        # Render the HTML for the newly assigned lecturer
+        context = {
+            'giang_vien_da_tham_gia': [giang_vien], 
+            'ctdt': ctdt,
+            'is_draft': is_draft
+        }
+        lecturer_html = render_to_string('daotao/partials/_giang_vien_da_tham_gia_list.html', context)
+
     elif action == 'remove':
-        ctdt.giang_vien_tham_gia.remove(giang_vien)
-        message = f"Đã xóa giảng viên {giang_vien.ho_ten} khỏi chương trình."
+        # This action will remove all assignments for this lecturer in this CTDT
+        PhanCongGiangDay.objects.filter(
+            giang_vien=giang_vien,
+            chi_tiet_hoc_phan__chuong_trinh_dao_tao=ctdt
+        ).delete()
+        message = f"Đã xóa tất cả phân công của giảng viên {giang_vien.ho_ten} khỏi chương trình."
+        
+        # Render the HTML for the newly available lecturer
+        context = {
+            'giang_vien_chua_tham_gia': [giang_vien], 
+            'is_draft': is_draft,
+            'ctdt': ctdt
+        }
+        lecturer_html = render_to_string('daotao/partials/_giang_vien_chua_tham_gia_list.html', context)
+
     else:
         return JsonResponse({'status': 'error', 'message': 'Hành động không hợp lệ.'}, status=400)
 
-    return JsonResponse({'status': 'success', 'message': message})
+    return JsonResponse({
+        'status': 'success', 
+        'message': message, 
+        'lecturer_html': lecturer_html,
+        'gv_name': giang_vien.ho_ten
+    })
+
+@login_required
+def load_giang_vien_tab(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    # This view will just render the container partial.
+    # The actual lists will be populated by another API call from the frontend JS.
+    return render(request, 'daotao/partials/_quan_ly_giang_vien_tab.html', {'ctdt': ctdt})
+
+@login_required
+def api_search_giang_vien_chua_tham_gia(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    query = request.GET.get('q', '')
+
+    # Find lecturers who have an assignment in this CTDT
+    giang_vien_da_tham_gia_pks = PhanCongGiangDay.objects.filter(
+        chi_tiet_hoc_phan__chuong_trinh_dao_tao=ctdt
+    ).values_list('giang_vien__pk', flat=True).distinct()
+
+    results = GiangVien.objects.exclude(pk__in=giang_vien_da_tham_gia_pks)
+    
+    if query:
+        results = results.filter(
+            Q(ho__icontains=query) | Q(ten__icontains=query) | Q(ma_can_bo__icontains=query)
+        )
+    
+    results = results.order_by('ten', 'ho')[:50] # Limit results for performance
+
+    context = {
+        'giang_vien_chua_tham_gia': results,
+        'ctdt': ctdt,
+        'is_draft': ctdt.trang_thai == 'DRAFT'
+    }
+    return render(request, 'daotao/partials/_giang_vien_chua_tham_gia_list.html', context)
+
+@login_required
+def api_get_giang_vien_da_tham_gia(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    query = request.GET.get('q', '')
+
+    # Get all lecturers who have at least one assignment in this CTDT
+    assigned_lecturers = GiangVien.objects.filter(
+        cac_phan_cong__chi_tiet_hoc_phan__chuong_trinh_dao_tao=ctdt
+    ).distinct().prefetch_related(
+        # Prefetch only the assignments relevant to the current CTDT
+        models.Prefetch(
+            'cac_phan_cong',
+            queryset=PhanCongGiangDay.objects.filter(chi_tiet_hoc_phan__chuong_trinh_dao_tao=ctdt)
+                                               .select_related('chi_tiet_hoc_phan__hoc_phan'),
+            to_attr='phan_cong_trong_ctdt'
+        )
+    )
+
+    if query:
+        assigned_lecturers = assigned_lecturers.filter(
+            Q(ho__icontains=query) | Q(ten__icontains=query) | Q(ma_can_bo__icontains=query)
+        )
+
+    assigned_lecturers = assigned_lecturers.order_by('ten', 'ho')
+
+    context = {
+        'giang_vien_da_tham_gia': assigned_lecturers,
+        'ctdt': ctdt,
+        'is_draft': ctdt.trang_thai == 'DRAFT'
+    }
+    return render(request, 'daotao/partials/_giang_vien_da_tham_gia_list.html', context)
+
+@login_required
+def api_get_phan_cong_form(request, pk_ctdt, pk_gv):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    giang_vien = get_object_or_404(GiangVien, pk=pk_gv)
+    
+    hoc_phan_list = ChiTietHocPhanTrongCTDT.objects.filter(chuong_trinh_dao_tao=ctdt).select_related('hoc_phan').order_by('hoc_phan__ma_hoc_phan')
+    
+    current_assignments = PhanCongGiangDay.objects.filter(
+        giang_vien=giang_vien,
+        chi_tiet_hoc_phan__chuong_trinh_dao_tao=ctdt
+    ).values_list('chi_tiet_hoc_phan__pk', 'vai_tro')
+    
+    current_assignments_dict = {pk: vai_tro for pk, vai_tro in current_assignments}
+
+    context = {
+        'giang_vien': giang_vien,
+        'hoc_phan_list': hoc_phan_list,
+        'current_assignments': current_assignments_dict,
+        'vai_tro_choices': PhanCongGiangDay.VAI_TRO_CHOICES,
+    }
+    return render(request, 'daotao/partials/_phan_cong_giang_day_modal.html', context)
+
+@login_required
+@require_http_methods(["POST"])
+@permission_required('daotao.change_chuongtrinhdaotao', raise_exception=True)
+def api_luu_phan_cong(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    giang_vien_pk = request.POST.get('giang_vien_pk')
+    selected_hoc_phan_pks = request.POST.getlist('hoc_phan')
+
+    if not giang_vien_pk:
+        return JsonResponse({'status': 'error', 'message': 'Thiếu thông tin giảng viên.'}, status=400)
+
+    giang_vien = get_object_or_404(GiangVien, pk=giang_vien_pk)
+
+    try:
+        with transaction.atomic():
+            # First, remove all existing assignments for this lecturer in this CTDT
+            PhanCongGiangDay.objects.filter(
+                giang_vien=giang_vien,
+                chi_tiet_hoc_phan__chuong_trinh_dao_tao=ctdt
+            ).delete()
+
+            # Then, create new assignments for the selected courses
+            for hp_ctdt_pk in selected_hoc_phan_pks:
+                vai_tro = request.POST.get(f'vai_tro_{hp_ctdt_pk}')
+                chi_tiet_hp = get_object_or_404(ChiTietHocPhanTrongCTDT, pk=hp_ctdt_pk)
+                
+                if chi_tiet_hp.chuong_trinh_dao_tao != ctdt:
+                    # Security check
+                    continue
+
+                PhanCongGiangDay.objects.create(
+                    giang_vien=giang_vien,
+                    chi_tiet_hoc_phan=chi_tiet_hp,
+                    vai_tro=vai_tro
+                )
+        
+        # After saving, re-fetch the lecturer with updated assignments to render the partial
+        giang_vien_updated = GiangVien.objects.prefetch_related(
+            models.Prefetch(
+                'cac_phan_cong',
+                queryset=PhanCongGiangDay.objects.filter(chi_tiet_hoc_phan__chuong_trinh_dao_tao=ctdt)
+                                                   .select_related('chi_tiet_hoc_phan__hoc_phan'),
+                to_attr='phan_cong_trong_ctdt'
+            )
+        ).get(pk=giang_vien_pk)
+
+        # Render just the course list part for this lecturer
+        updated_courses_html = render_to_string(
+            'daotao/partials/_assigned_courses_list.html', 
+            {'gv': giang_vien_updated}
+        )
+
+        return JsonResponse({
+            'status': 'success', 
+            'message': 'Đã cập nhật phân công thành công!',
+            'updated_courses_html': updated_courses_html,
+            'giang_vien_pk': giang_vien_pk
+        })
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': f'Đã có lỗi xảy ra: {str(e)}'}, status=500)
 
 #endregion

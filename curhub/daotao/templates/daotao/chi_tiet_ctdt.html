@@ -133,9 +133,6 @@
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="export-tab" data-toggle="tab" data-target="#export-pane" type="button" role="tab" aria-controls="export-pane" aria-selected="false">Xuất báo cáo</button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="giangvien-tab" data-toggle="tab" data-target="#giangvien-pane" type="button" role="tab" aria-controls="giangvien-pane" aria-selected="false">Giảng viên</button>
-            </li>
              <li class="nav-item" role="presentation">
                 <button class="nav-link" id="history-tab" data-toggle="tab" data-target="#history-pane" type="button" role="tab" aria-controls="history-pane" aria-selected="false">Lịch sử Thay đổi</button>
             </li>
@@ -453,7 +450,7 @@
 
             <!-- Tab Đội ngũ giảng viên -->
             <div class="tab-pane fade p-3" id="staff-pane" role="tabpanel" aria-labelledby="staff-tab">
-                <p>Nội dung cho Đội ngũ giảng viên sẽ được triển khai ở đây.</p>
+                {% include 'daotao/partials/_quan_ly_giang_vien_tab.html' %}
             </div>
 
             <!-- Tab Điều kiện môn học -->
@@ -466,48 +463,6 @@
                 <p>Nội dung cho Xuất báo cáo sẽ được triển khai ở đây.</p>
             </div>
 
-            <!-- Tab Giảng viên -->
-            <div class="tab-pane fade p-3" id="giangvien-pane" role="tabpanel" aria-labelledby="giangvien-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h5>Đội ngũ giảng viên tham gia chương trình</h5>
-                    {% if perms.daotao.change_chuongtrinhdaotao %}
-                        <a href="{% url 'daotao:quan_ly_giang_vien_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-primary btn-sm">
-                            <i class="fas fa-users-cog mr-1"></i> Quản lý danh sách
-                        </a>
-                    {% endif %}
-                </div>
-                <div class="table-responsive">
-                    {% with giang_vien_list=ctdt.giang_vien_tham_gia.all %}
-                        {% if giang_vien_list %}
-                        <table class="table table-bordered table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Mã cán bộ</th>
-                                    <th>Họ và tên</th>
-                                    <th>Email</th>
-                                    <th>Đơn vị công tác</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for gv in giang_vien_list %}
-                                <tr>
-                                    <td>{{ gv.ma_can_bo }}</td>
-                                    <td>{{ gv.ho_ten }}</td>
-                                    <td>{{ gv.email|default:"N/A" }}</td>
-                                    <td>{{ gv.co_quan_cong_tac.ten_don_vi|default:"N/A" }}</td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                        {% else %}
-                        <div class="alert alert-info">
-                            Chưa có giảng viên nào được thêm vào chương trình đào tạo này.
-                        </div>
-                        {% endif %}
-                    {% endwith %}
-                </div>
-            </div>
-            
             <!-- Tab Lịch sử thay đổi -->
             <div class="tab-pane fade p-3" id="history-pane" role="tabpanel" aria-labelledby="history-tab">
                 <h5>Nhật ký thay đổi</h5>
@@ -588,6 +543,30 @@
                     <button type="submit" class="btn btn-primary">Lưu</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<!-- Phan Cong Giang Day Modal -->
+<div class="modal fade" id="phanCongModal" tabindex="-1" role="dialog" aria-labelledby="phanCongModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="phanCongModalLabel">Phân công giảng dạy cho Giảng viên: <span id="modalGvName"></span></h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Content will be loaded via AJAX -->
+                <div id="phanCongModalBody">
+                    <p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải danh sách học phần...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-primary" id="savePhanCongBtn">Lưu phân công</button>
+            </div>
         </div>
     </div>
 </div>
@@ -1036,8 +1015,130 @@ $(document).ready(function() {
     // Activate tab based on URL hash
     var hash = window.location.hash;
     if (hash) {
-        $('a[href="' + hash + '"]').tab('show');
+        // Use a more specific selector and ensure it's triggered after the page is fully ready
+        setTimeout(function() {
+            var tabButton = $('.nav-tabs button[data-target="' + hash + '"]');
+            if (tabButton.length) {
+                tabButton.tab('show');
+            }
+        }, 100); // A small delay can help ensure all elements are ready
     }
+
+
+    // --- Staff Tab Logic ---
+    function loadAvailableLecturers(searchTerm = '') {
+        const url = `{% url 'daotao:api_search_giang_vien_chua_tham_gia' pk_ctdt=ctdt.pk %}?q=${encodeURIComponent(searchTerm)}`;
+        $('#available-lecturers').html('<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải...</p>');
+        $.get(url, function(data) {
+            $('#available-lecturers').html(data);
+        });
+    }
+
+    function loadAssignedLecturers(searchTerm = '') {
+        const url = `{% url 'daotao:api_get_giang_vien_da_tham_gia' pk_ctdt=ctdt.pk %}?q=${encodeURIComponent(searchTerm)}`;
+        $('#assigned-lecturers').html('<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải...</p>');
+        $.get(url, function(data) {
+            $('#assigned-lecturers').html(data);
+        });
+    }
+
+    // Initial load when tab is shown
+    $('button[data-target="#staff-pane"]').on('shown.bs.tab', function (e) {
+        loadAvailableLecturers();
+        loadAssignedLecturers();
+    });
+
+    // Handle search for available lecturers
+    let availableSearchTimeout;
+    $('#staff-pane').on('keyup', '#giangvien-search-available', function() {
+        clearTimeout(availableSearchTimeout);
+        const searchTerm = $(this).val();
+        availableSearchTimeout = setTimeout(() => loadAvailableLecturers(searchTerm), 300);
+    });
+
+    // Handle search for assigned lecturers
+    let assignedSearchTimeout;
+    $('#staff-pane').on('keyup', '#giangvien-search-assigned', function() {
+        clearTimeout(assignedSearchTimeout);
+        const searchTerm = $(this).val();
+        assignedSearchTimeout = setTimeout(() => loadAssignedLecturers(searchTerm), 300);
+    });
+
+    // Handle Add/Remove lecturer actions via AJAX
+    $('#staff-pane').on('click', '.btn-add-gv, .btn-remove-gv', function(e) {
+        e.preventDefault();
+        const button = $(this);
+        const gvPk = button.data('gv-pk');
+        const action = button.hasClass('btn-add-gv') ? 'add' : 'remove';
+        const url = `{% url 'daotao:cap_nhat_giang_vien_ctdt' pk_ctdt=ctdt.pk %}`;
+        const csrfToken = '{{ csrf_token }}';
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {
+                'giang_vien_pk': gvPk,
+                'action': action,
+                'csrfmiddlewaretoken': csrfToken
+            },
+            dataType: 'json',
+            success: function(response) {
+                if (response.status === 'success') {
+                    toastr.success(response.message);
+                    // Remove the lecturer item from its current list
+                    button.closest('.list-group-item').fadeOut(300, function() { $(this).remove(); });
+                    
+                    // Add the lecturer item to the other list
+                    if (action === 'add') {
+                        $('#assigned-lecturers').append(response.lecturer_html);
+                    } else {
+                        $('#available-lecturers').append(response.lecturer_html);
+                    }
+                } else {
+                    toastr.error('Lỗi: ' + response.message);
+                }
+            },
+            error: function() {
+                toastr.error('Đã có lỗi xảy ra khi thực hiện thao tác.');
+            }
+        });
+    });
+
+    // --- Phan Cong Modal Logic ---
+    $('#staff-pane').on('click', '.btn-phan-cong', function() {
+        const gvPk = $(this).data('gv-pk');
+        const gvName = $(this).data('gv-name');
+        const url = `{% url 'daotao:api_get_phan_cong_form' pk_ctdt=ctdt.pk pk_gv=0 %}`.replace('0', gvPk);
+
+        $('#modalGvName').text(gvName);
+        $('#phanCongModalBody').html('<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải...</p>');
+        $('#phanCongModal').modal('show');
+
+        $.get(url, function(data) {
+            $('#phanCongModalBody').html(data);
+        }).fail(function() {
+            $('#phanCongModalBody').html('<p class="text-danger">Không thể tải được dữ liệu phân công.</p>');
+        });
+    });
+
+    $('#savePhanCongBtn').on('click', function() {
+        const form = $('#phanCongForm');
+        const url = `{% url 'daotao:api_luu_phan_cong' pk_ctdt=ctdt.pk %}`;
+        const data = form.serialize();
+
+        $.post(url, data).done(function(response) {
+            if (response.status === 'success') {
+                toastr.success(response.message);
+                $('#phanCongModal').modal('hide');
+                // Dynamically update the assigned courses list
+                $(`#assigned-courses-${response.giang_vien_pk}`).html(response.updated_courses_html);
+            } else {
+                toastr.error('Lỗi: ' + response.message);
+            }
+        }).fail(function() {
+            toastr.error('Đã có lỗi xảy ra khi lưu phân công.');
+        });
+    });
 
     // --- Syllabus Modal Logic ---
     $('#deCuongChiTietModal').on('show.bs.modal', function (event) {
@@ -1210,6 +1311,40 @@ curhub/daotao/templates/daotao/chi_tiet_ctdt.html
 
 # Context Window Usage
 248,685 / 1,048.576K tokens used (24%)
+
+# Current Mode
+ACT MODE
+</environment_details>
+<environment_details>
+# VSCode Visible Files
+curhub/daotao/templates/daotao/chi_tiet_ctdt.html
+
+# VSCode Open Tabs
+c:/Users/nttoan/AppData/Roaming/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json
+requirements.txt
+curhub/curhub/settings.py
+curhub/daotao/templates/daotao/danh_sach_ctdt.html
+curhub/daotao/templates/daotao/partials/_form_fields.html
+curhub/daotao/templates/daotao/them_hoc_phan_vao_ctdt.html
+curhub/daotao/templates/daotao/upload_hoc_phan_ctdt.html
+curhub/daotao/templates/daotao/them_hoc_phan_hang_loat.html
+curhub/daotao/templates/daotao/danh_sach_giang_vien.html
+curhub/daotao/navigation.py
+curhub/daotao/management/commands/import_giangvien.py
+curhub/daotao/models.py
+curhub/daotao/templates/daotao/partials/_quan_ly_giang_vien_tab.html
+curhub/daotao/templates/daotao/partials/_quan_ly_giang_vien_list.html
+curhub/daotao/templates/daotao/quan_ly_giang_vien_ctdt.html
+curhub/daotao/templates/daotao/partials/_giang_vien_chua_tham_gia_list.html
+curhub/daotao/views.py
+curhub/daotao/urls.py
+curhub/daotao/templates/daotao/chi_tiet_ctdt.html
+
+# Current Time
+7/31/2025, 4:18:51 PM (Asia/Bangkok, UTC+7:00)
+
+# Context Window Usage
+257,367 / 1,048.576K tokens used (25%)
 
 # Current Mode
 ACT MODE

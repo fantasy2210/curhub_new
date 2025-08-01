@@ -667,6 +667,32 @@ class HinhThucDanhGia(models.Model):
         verbose_name_plural = "Các Hình thức Đánh giá"
         ordering = ['de_cuong_hoc_phan', 'loai_danh_gia']
 
+# Model PhanCongGiangDay
+class PhanCongGiangDay(models.Model):
+    VAI_TRO_CHOICES = [
+        ('CHU_TRI_XD', 'Chủ trì xây dựng'),
+        ('CHU_TRI_GD', 'Chủ trì giảng dạy'),
+        ('THAM_GIA_GD', 'Tham gia giảng dạy'),
+    ]
+
+    giang_vien = models.ForeignKey('GiangVien', on_delete=models.CASCADE, related_name='cac_phan_cong', verbose_name="Giảng viên")
+    chi_tiet_hoc_phan = models.ForeignKey(ChiTietHocPhanTrongCTDT, on_delete=models.CASCADE, related_name='cac_phan_cong', verbose_name="Học phần trong CTĐT")
+    vai_tro = models.CharField(
+        max_length=20,
+        choices=VAI_TRO_CHOICES,
+        default='THAM_GIA_GD',
+        verbose_name="Vai trò"
+    )
+
+    class Meta:
+        verbose_name = "Phân công Giảng dạy"
+        verbose_name_plural = "Các Phân công Giảng dạy"
+        unique_together = [['giang_vien', 'chi_tiet_hoc_phan']]
+
+    def __str__(self):
+        return f"{self.giang_vien.ho_ten} dạy {self.chi_tiet_hoc_phan.hoc_phan.ten_hoc_phan} với vai trò {self.get_vai_tro_display()}"
+
+
 # Model GiangVien
 class GiangVien(models.Model):
     GIOI_TINH_CHOICES = [
@@ -706,12 +732,6 @@ class GiangVien(models.Model):
         verbose_name="Cơ quan công tác"
     )
     
-    chuong_trinh_tham_gia = models.ManyToManyField(
-        ChuongTrinhDaoTao,
-        blank=True,
-        related_name='giang_vien_tham_gia',
-        verbose_name="Chương trình đào tạo tham gia"
-    )
 
     @property
     def ho_ten(self):
