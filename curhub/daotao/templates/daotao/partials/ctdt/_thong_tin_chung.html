@@ -1,0 +1,56 @@
+<!-- General Information Section -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Thông tin chung</h3>
+        {% if perms.daotao.change_chuongtrinhdaotao %}
+        <div class="card-tools">
+            <a href="{% url 'daotao:sua_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-warning btn-sm">
+                <i class="fas fa-edit mr-1"></i> Chỉnh sửa
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="info-item">
+                    <label>Ngành đào tạo:</label>
+                    <span>{{ ctdt.nganh_dao_tao }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Bậc đào tạo:</label>
+                    <span>{{ ctdt.get_bac_dao_tao_display }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Hình thức đào tạo:</label>
+                    <span>{{ ctdt.get_hinh_thuc_dao_tao_display }}</span>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="info-item">
+                    <label>Tổng số tín chỉ:</label>
+                    <span>{{ ctdt.tong_so_tin_chi }}</span>
+                </div>
+                <div class="info-item">
+                    <label>Thời gian đào tạo:</label>
+                    <span>{{ ctdt.thoi_gian_dao_tao }} năm</span>
+                </div>
+                <div class="info-item">
+                    <label>Đối tượng tuyển sinh:</label>
+                    <span>{{ ctdt.doi_tuong_tuyen_sinh|safe }}</span>
+                </div>
+            </div>
+        </div>
+        
+        {% if ctdt.ghi_chu_ctdt %}
+        <div class="row mt-3">
+            <div class="col-12">
+                <div class="info-item">
+                    <label>Ghi chú:</label>
+                    <p class="text-muted">{{ ctdt.ghi_chu_ctdt }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>

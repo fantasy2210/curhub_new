@@ -1,0 +1,100 @@
+<!-- Header Card -->
+<div class="info-card">
+    <div class="info-header">
+        <div>
+            <h3>{{ ctdt.ten_nganh_ctdt }}</h3>
+            <p class="info-meta">
+                Mã: <strong>{{ ctdt.ma_nganh_ctdt }}</strong> | Phiên bản: <strong>{{ ctdt.version }}</strong>
+            </p>
+        </div>
+        <div class="btn-toolbar" role="toolbar">
+             <span class="badge align-self-center mr-3
+                {% if ctdt.trang_thai == 'APPROVED' %} badge-success
+                {% elif ctdt.trang_thai == 'PENDING_APPROVAL' %} badge-warning
+                {% elif ctdt.trang_thai == 'DRAFT' %} badge-secondary
+                {% elif ctdt.trang_thai == 'ARCHIVED' %} badge-light
+                {% else %} badge-danger {% endif %}">
+                <i class="fas
+                    {% if ctdt.trang_thai == 'APPROVED' %} fa-check-circle
+                    {% elif ctdt.trang_thai == 'PENDING_APPROVAL' %} fa-hourglass-half
+                    {% elif ctdt.trang_thai == 'DRAFT' %} fa-pencil-alt
+                    {% elif ctdt.trang_thai == 'ARCHIVED' %} fa-archive
+                    {% else %} fa-times-circle {% endif %} mr-1"></i>
+                {{ ctdt.get_trang_thai_display }}
+            </span>
+            <div class="btn-group">
+                {% if perms.daotao.change_chuongtrinhdaotao %}
+                <a href="{% url 'daotao:sua_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-warning"><i class="fas fa-edit mr-1"></i>Cập nhật</a>
+                {% endif %}
+                <a href="{% url 'daotao:danh_sach_ctdt' %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Quay lại</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Workflow Action Buttons -->
+    <div class="workflow-actions">
+        {% if ctdt.trang_thai == 'DRAFT' and perms.daotao.can_submit_for_approval %}
+        <form action="{% url 'daotao:gui_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn gửi duyệt chương trình này?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane mr-1"></i> Gửi duyệt
+            </button>
+        </form>
+        {% endif %}
+
+        {% if ctdt.trang_thai == 'PENDING_APPROVAL' %}
+            {% if perms.daotao.can_approve_ctdt %}
+            <form action="{% url 'daotao:xu_ly_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT chương trình này?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="approve">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-check mr-1"></i> Phê duyệt
+                </button>
+            </form>
+            {% endif %}
+
+            {% if perms.daotao.can_reject_ctdt %}
+            <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#rejectModal">
+                <i class="fas fa-times mr-1"></i> Yêu cầu chỉnh sửa
+            </button>
+            {% endif %}
+        {% endif %}
+
+        {% if ctdt.trang_thai == 'APPROVED' and perms.daotao.can_create_new_version %}
+        <form action="{% url 'daotao:tao_phien_ban_moi_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn tạo một phiên bản mới từ chương trình đào tạo này?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-info">
+                <i class="fas fa-copy mr-1"></i> Tạo phiên bản mới
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal for Rejection Reason -->
+<div class="modal fade" id="rejectModal" tabindex="-1" role="dialog" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <form action="{% url 'daotao:xu_ly_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="reject">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="rejectModalLabel">Yêu cầu chỉnh sửa Chương trình Đào tạo</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="rejection_reason">Lý do yêu cầu chỉnh sửa:</label>
+                        <textarea class="form-control" id="rejection_reason" name="ly_do" rows="4" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary">Gửi yêu cầu</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

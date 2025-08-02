@@ -1,0 +1,60 @@
+<!-- Course List Section -->
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Danh sách học phần</h3>
+        {% if perms.daotao.add_chitiethocphantrongctdt %}
+        <div class="card-tools">
+            <a href="{% url 'daotao:them_hoc_phan_vao_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus mr-1"></i> Thêm học phần
+            </a>
+        </div>
+        {% endif %}
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th style="width: 10px">#</th>
+                    <th>Mã HP</th>
+                    <th>Tên học phần</th>
+                    <th>Số tín chỉ</th>
+                    <th>Loại HP</th>
+                    <th>Học kỳ</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for hp in hoc_phan_list %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>{{ hp.hoc_phan.ma_hoc_phan }}</td>
+                    <td>
+                        <a href="{% url 'daotao:chi_tiet_hoc_phan_trong_ctdt' pk_chi_tiet_hp=hp.pk %}">
+                            {{ hp.hoc_phan.ten_hoc_phan }}
+                        </a>
+                    </td>
+                    <td>{{ hp.hoc_phan.so_tin_chi }}</td>
+                    <td>{{ hp.hoc_phan.get_loai_hoc_phan_display }}</td>
+                    <td>{{ hp.hoc_ky }}</td>
+                    <td>
+                        <div class="btn-group">
+                            <a href="{% url 'daotao:sua_hoc_phan_ctdt' pk_chi_tiet_hp=hp.pk %}" 
+                               class="btn btn-sm btn-warning" title="Chỉnh sửa">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <a href="{% url 'daotao:xoa_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp.pk %}" 
+                               class="btn btn-sm btn-danger" title="Xóa">
+                                <i class="fas fa-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted">Chưa có học phần nào trong chương trình này</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,47 @@
+{% load custom_filters %}
+<div class="card mb-2" id="giang-vien-{{ gv.pk }}">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <h6 class="mb-0">
+                <i class="fas fa-user-graduate mr-2"></i>
+                {{ gv.ho_ten }} ({{ gv.ma_can_bo }})
+            </h6>
+        </div>
+        <div>
+            {% if is_draft %}
+            <button class="btn btn-sm btn-outline-danger btn-remove-gv" data-gv-pk="{{ gv.pk }}">
+                <i class="fas fa-user-minus"></i> Xóa
+            </button>
+            <button class="btn btn-sm btn-primary btn-phan-cong" data-gv-pk="{{ gv.pk }}" data-gv-name="{{ gv.ho_ten }}" data-toggle="modal" data-target="#phanCongModal">
+                <i class="fas fa-tasks"></i> Phân công
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body p-2">
+        <div class="assigned-courses" id="assigned-courses-{{ gv.pk }}">
+            {% if gv.phan_cong_trong_ctdt %}
+                <table class="table table-sm table-bordered mb-0">
+                    <thead>
+                        <tr>
+                            <th>Mã HP</th>
+                            <th>Tên HP</th>
+                            <th>Vai trò</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for pc in gv.phan_cong_trong_ctdt %}
+                        <tr>
+                            <td>{{ pc.chi_tiet_hoc_phan.hoc_phan.ma_hoc_phan }}</td>
+                            <td>{{ pc.chi_tiet_hoc_phan.hoc_phan.ten_hoc_phan }}</td>
+                            <td>{{ pc.get_vai_tro_display }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <p class="text-muted mb-0">Chưa được phân công giảng dạy học phần nào</p>
+            {% endif %}
+        </div>
+    </div>
+</div>

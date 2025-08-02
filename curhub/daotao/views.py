@@ -25,6 +25,7 @@ from django.db import transaction
 from django.template.loader import render_to_string
 import pandas as pd
 import io
+from django.middleware.csrf import get_token
 import json
 
 def index(request):
@@ -129,15 +130,37 @@ def chi_tiet_ctdt(request, pk_ctdt):
     hoc_phan_theo_khoi = dict(sorted(hoc_phan_theo_khoi.items()))
 
     # Chuẩn bị dữ liệu cho biểu đồ tròn
+    # Process pie chart data
     pie_chart_labels = list(hoc_phan_theo_khoi.keys())
     pie_chart_data = [details['tong_tin_chi'] or 0 for details in hoc_phan_theo_khoi.values()]
 
-    # Thêm khối "Chưa phân loại" vào dữ liệu biểu đồ nếu có
+    # Add "Unclassified" block if exists
     if hoc_phan_chua_xep_khoi:
         tong_tin_chi_chua_xep = sum(hp.tong_so_tin_chi_apdung or 0 for hp in hoc_phan_chua_xep_khoi)
         if tong_tin_chi_chua_xep > 0:
             pie_chart_labels.append("Chưa phân loại")
             pie_chart_data.append(tong_tin_chi_chua_xep)
+
+    # Build complete page config dictionary
+    page_config = {
+        "ctdtPk": chuong_trinh.pk,
+        "isDraft": chuong_trinh.trang_thai == 'DRAFT',
+        "csrfToken": get_token(request),
+        "pieChart": {
+            "labels": pie_chart_labels,
+            "data": pie_chart_data
+        },
+        "urls": {
+            "flowchartData": reverse('daotao:api_program_flowchart_data', kwargs={'pk_ctdt': chuong_trinh.pk}),
+            "staff": {
+                "searchAvailable": reverse('daotao:api_search_giang_vien_chua_tham_gia', kwargs={'pk_ctdt': chuong_trinh.pk}),
+                "assigned": reverse('daotao:api_get_giang_vien_da_tham_gia', kwargs={'pk_ctdt': chuong_trinh.pk}),
+                "update": reverse('daotao:cap_nhat_giang_vien_ctdt', kwargs={'pk_ctdt': chuong_trinh.pk}),
+                "getPhanCongForm": reverse('daotao:api_get_phan_cong_form', kwargs={'pk_ctdt': chuong_trinh.pk, 'pk_gv': 0}),
+                "savePhanCong": reverse('daotao:api_luu_phan_cong', kwargs={'pk_ctdt': chuong_trinh.pk})
+            },
+        }
+    }
 
     muc_tieu_dao_tao_ctdt = MucTieuDaoTao.objects.filter(chuong_trinh_dao_tao=chuong_trinh).order_by('ma_muc_tieu')
     
@@ -206,8 +229,7 @@ def chi_tiet_ctdt(request, pk_ctdt):
         'hoc_phan_theo_khoi': hoc_phan_theo_khoi,
         'hoc_phan_chua_xep_khoi': hoc_phan_chua_xep_khoi,
         'tong_tin_chi_toan_ctdt': tong_tin_chi_toan_ctdt,
-        'pie_chart_labels_json': json.dumps(pie_chart_labels),
-        'pie_chart_data_json': json.dumps(pie_chart_data),
+        'page_config_json': json.dumps(page_config),
         'muc_tieu_dao_tao_ctdt': muc_tieu_dao_tao_ctdt,
         'chuan_dau_ra_ctdt': chuan_dau_ra_ctdt, # Keep for simple list if needed elsewhere
         'plo_groups': plo_groups,
@@ -2005,21 +2027,37 @@ def cap_nhat_giang_vien_ctdt(request, pk_ctdt):
     is_draft = ctdt.trang_thai == 'DRAFT'
 
     if action == 'add':
-        # This action is now optimistic on the frontend. 
-        # We don't create a dummy assignment anymore.
-        # The lecturer will be formally linked when an actual assignment is made.
-        message = f"Đã chuyển giảng viên {giang_vien.ho_ten} sang cột đã tham gia. Vui lòng phân công cụ thể."
-        
-        # Manually add the attribute that the template expects
-        giang_vien.phan_cong_trong_ctdt = []
+        if not is_draft:
+            return JsonResponse({'status': 'error', 'message': 'Chỉ có thể thêm giảng viên khi CTĐT ở trạng thái "Bản nháp".'}, status=403)
+        # Create a default assignment for the lecturer in the CTDT
+        # For now, assign to the first ChiTietHocPhanTrongCTDT if exists, else no assignment
+        first_chi_tiet_hp = ChiTietHocPhanTrongCTDT.objects.filter(chuong_trinh_dao_tao=ctdt).first()
+        if first_chi_tiet_hp:
+            PhanCongGiangDay.objects.create(
+                giang_vien=giang_vien,
+                chi_tiet_hoc_phan=first_chi_tiet_hp,
+                vai_tro=PhanCongGiangDay.VAI_TRO_CHOICES[0][0]  # Default role, e.g., 'GV'
+            )
+            message = f"Đã thêm giảng viên {giang_vien.ho_ten} vào chương trình đào tạo."
+        else:
+            message = f"Chưa có học phần trong CTĐT để phân công giảng viên {giang_vien.ho_ten}."
 
-        # Render the HTML for the newly assigned lecturer
+        # Re-fetch the lecturer with updated assignments to render the single lecturer list item partial
+        giang_vien_updated = GiangVien.objects.prefetch_related(
+            models.Prefetch(
+                'cac_phan_cong',
+                queryset=PhanCongGiangDay.objects.filter(chi_tiet_hoc_phan__chuong_trinh_dao_tao=ctdt)
+                                                   .select_related('chi_tiet_hoc_phan__hoc_phan'),
+                to_attr='phan_cong_trong_ctdt'
+            )
+        ).get(pk=giang_vien_pk)
+
         context = {
-            'giang_vien_da_tham_gia': [giang_vien], 
+            'gv': giang_vien_updated,
             'ctdt': ctdt,
             'is_draft': is_draft
         }
-        lecturer_html = render_to_string('daotao/partials/_giang_vien_da_tham_gia_list.html', context)
+        lecturer_html = render_to_string('daotao/partials/_giang_vien_da_tham_gia_list_item.html', context)
 
     elif action == 'remove':
         # This action will remove all assignments for this lecturer in this CTDT
