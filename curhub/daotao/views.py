@@ -109,7 +109,8 @@ def chi_tiet_ctdt(request, pk_ctdt):
     tong_tin_chi_toan_ctdt = 0
 
     for hp in hoc_phan_list:
-        tong_tin_chi_toan_ctdt += hp.tong_so_tin_chi_apdung
+        tin_chi_hp = hp.tong_so_tin_chi_apdung or 0
+        tong_tin_chi_toan_ctdt += tin_chi_hp
         khoi = hp.danh_muc_kien_thuc
         if khoi is not None:
             # Sử dụng khoi.ten_danh_muc làm key để sắp xếp theo alphabet sau này
@@ -120,7 +121,7 @@ def chi_tiet_ctdt(request, pk_ctdt):
                     'tong_tin_chi': 0
                 }
             hoc_phan_theo_khoi[khoi.ten_danh_muc]['hoc_phan_list'].append(hp)
-            hoc_phan_theo_khoi[khoi.ten_danh_muc]['tong_tin_chi'] += hp.tong_so_tin_chi_apdung
+            hoc_phan_theo_khoi[khoi.ten_danh_muc]['tong_tin_chi'] += tin_chi_hp
         else:
             hoc_phan_chua_xep_khoi.append(hp)
 
@@ -129,7 +130,14 @@ def chi_tiet_ctdt(request, pk_ctdt):
 
     # Chuẩn bị dữ liệu cho biểu đồ tròn
     pie_chart_labels = list(hoc_phan_theo_khoi.keys())
-    pie_chart_data = [details['tong_tin_chi'] for details in hoc_phan_theo_khoi.values()]
+    pie_chart_data = [details['tong_tin_chi'] or 0 for details in hoc_phan_theo_khoi.values()]
+
+    # Thêm khối "Chưa phân loại" vào dữ liệu biểu đồ nếu có
+    if hoc_phan_chua_xep_khoi:
+        tong_tin_chi_chua_xep = sum(hp.tong_so_tin_chi_apdung or 0 for hp in hoc_phan_chua_xep_khoi)
+        if tong_tin_chi_chua_xep > 0:
+            pie_chart_labels.append("Chưa phân loại")
+            pie_chart_data.append(tong_tin_chi_chua_xep)
 
     muc_tieu_dao_tao_ctdt = MucTieuDaoTao.objects.filter(chuong_trinh_dao_tao=chuong_trinh).order_by('ma_muc_tieu')
     
@@ -1771,6 +1779,23 @@ def api_get_plo_details(request, pk_cdr):
         'dap_ung_muc_tieu': list(plo.dap_ung_muc_tieu.values_list('pk', flat=True))
     }
     return JsonResponse(data)
+
+@login_required
+@require_http_methods(["POST"])
+@permission_required('daotao.change_chuandaura', raise_exception=True)
+def api_sua_plo(request, pk_cdr):
+    plo = get_object_or_404(ChuanDauRa, pk=pk_cdr)
+    ctdt = plo.chuong_trinh_dao_tao
+
+    if ctdt.trang_thai != 'DRAFT':
+        return JsonResponse({'status': 'error', 'message': "Chỉ có thể sửa khi CTĐT ở trạng thái 'Bản nháp'."}, status=403)
+
+    form = ChuanDauRaForm(request.POST, instance=plo, ctdt=ctdt)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'status': 'success', 'message': 'Đã cập nhật Chuẩn Đầu ra thành công!'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors}, status=400)
 
 @login_required
 def api_get_de_cuong_chi_tiet(request, pk_hoc_phan):

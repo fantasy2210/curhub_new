@@ -49,7 +49,15 @@
       <!-- Sidebar user panel (optional) -->
       <div class="user-panel mt-3 pb-3 mb-3 d-flex">
         <div class="info">
-          <a href="#" class="d-block">User</a>
+          {% if user.is_authenticated %}
+            <a href="#" class="d-block">{{ user.username }}</a>
+            <form id="logout-form" action="{% url 'logout' %}" method="post" style="display: none;">
+                {% csrf_token %}
+            </form>
+            <a href="#" onclick="document.getElementById('logout-form').submit();" class="d-block">Logout</a>
+          {% else %}
+            <a href="{% url 'login' %}" class="d-block">Login</a>
+          {% endif %}
         </div>
       </div>
 

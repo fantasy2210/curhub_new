@@ -48,7 +48,7 @@ urlpatterns = [
     path('api/po/<int:pk_po>/sua/', views.sua_muc_tieu_dao_tao, name='api_sua_po'),
     path('api/po/<int:pk_po>/chi-tiet/', views.api_get_po_details, name='api_get_po_details'),
     path('api/ctdt/<int:pk_ctdt>/plo/them/', views.api_them_plo, name='api_them_plo'),
-    path('api/plo/<int:pk_cdr>/sua/', views.sua_chuan_dau_ra, name='api_sua_plo'),
+    path('api/plo/<int:pk_cdr>/sua/', views.api_sua_plo, name='api_sua_plo'),
     path('api/plo/<int:pk_cdr>/chi-tiet/', views.api_get_plo_details, name='api_get_plo_details'), # New API endpoint
 
     path('api/nganh-dao-tao-options/', views.get_nganh_dao_tao_options, name='get_nganh_dao_tao_options'),

@@ -87,7 +87,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',    # Chỉ định Django sử dụng MySQL backend
         'NAME': 'curhub_db',                    # Tên database bạn đã tạo trong MySQL
         'USER': 'root',       # Username MySQL bạn đã tạo
-        'PASSWORD': '',   # Mật khẩu cho user MySQL đó
+        'PASSWORD': '2569',   # Mật khẩu cho user MySQL đó
         'HOST': 'localhost',                    # Địa chỉ của MySQL server (thường là 'localhost' hoặc '127.0.0.1' nếu chạy trên cùng máy)
         'PORT': '3306',                         # Port mặc định của MySQL (thường là 3306)
         'OPTIONS': {

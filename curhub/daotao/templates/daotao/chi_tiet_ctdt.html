@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load custom_filters %}
+{% load form_tags %}
 
 {% block title %}CURHUB | Chi tiết CTĐT{% endblock %}
 
@@ -11,11 +12,77 @@
 {% endblock %}
 
 {% block content %}
-<div class="card card-primary card-outline">
-    <div class="card-header">
-        <h3 class="card-title">{{ ctdt.ten_nganh_ctdt }}</h3>
-        <div class="card-tools">
-            <span class="badge
+<style>
+    .info-card {
+        background-color: #fff;
+        border-radius: 0.5rem;
+        box-shadow: 0 0 1px rgba(0,0,0,.125), 0 1px 3px rgba(0,0,0,.2);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+    .info-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    .info-header h3 {
+        margin-bottom: 0;
+        font-size: 1.75rem;
+        font-weight: 600;
+    }
+    .info-header .btn-toolbar {
+        flex-shrink: 0;
+    }
+    .info-meta {
+        color: #6c757d;
+        margin-bottom: 1.5rem;
+    }
+    .nav-tabs .nav-link {
+        border-bottom-width: 3px;
+    }
+    .nav-tabs .nav-link.active {
+        border-color: #007bff #dee2e6 #fff;
+    }
+    .tab-content {
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-top: 0;
+        padding: 1.5rem;
+        border-radius: 0 0 0.25rem 0.25rem;
+    }
+    .details-grid dt {
+        font-weight: 600;
+        color: #495057;
+    }
+    .details-grid dd {
+        margin-bottom: 0.75rem;
+    }
+    .section-title {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .section-title h5 {
+        margin-bottom: 0;
+        font-weight: 600;
+    }
+</style>
+
+<!-- Header Card -->
+<div class="info-card">
+    <div class="info-header">
+        <div>
+            <h3>{{ ctdt.ten_nganh_ctdt }}</h3>
+            <p class="info-meta">
+                Mã: <strong>{{ ctdt.ma_nganh_ctdt }}</strong> | Phiên bản: <strong>{{ ctdt.version }}</strong>
+            </p>
+        </div>
+        <div class="btn-toolbar" role="toolbar">
+             <span class="badge align-self-center mr-3
                 {% if ctdt.trang_thai == 'APPROVED' %} badge-success
                 {% elif ctdt.trang_thai == 'PENDING_APPROVAL' %} badge-warning
                 {% elif ctdt.trang_thai == 'DRAFT' %} badge-secondary
@@ -29,88 +96,61 @@
                     {% else %} fa-times-circle {% endif %} mr-1"></i>
                 {{ ctdt.get_trang_thai_display }}
             </span>
-            
-            {% if perms.daotao.change_chuongtrinhdaotao %}
-            <a href="{% url 'daotao:sua_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-warning btn-sm mr-1"><i class="fas fa-edit mr-1"></i>Cập nhật chương trình</a>
-            {% endif %}
-            <a href="{% url 'daotao:danh_sach_ctdt' %}" class="btn btn-tool"><i class="fas fa-arrow-left"></i></a>
+            <div class="btn-group">
+                {% if perms.daotao.change_chuongtrinhdaotao %}
+                <a href="{% url 'daotao:sua_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-warning"><i class="fas fa-edit mr-1"></i>Cập nhật</a>
+                {% endif %}
+                <a href="{% url 'daotao:danh_sach_ctdt' %}" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Quay lại</a>
+            </div>
         </div>
     </div>
-    <div class="card-body">
-        <p class="text-muted">Mã: {{ ctdt.ma_nganh_ctdt }} | Phiên bản: {{ ctdt.version }}</p>
-        
-        <!-- Workflow Action Buttons -->
-        <div class="my-3">
-            {% if ctdt.trang_thai == 'DRAFT' and perms.daotao.can_submit_for_approval %}
-            <form action="{% url 'daotao:gui_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn gửi duyệt chương trình ini tidak?');">
+
+    <!-- Workflow Action Buttons -->
+    <div class="workflow-actions">
+        {% if ctdt.trang_thai == 'DRAFT' and perms.daotao.can_submit_for_approval %}
+        <form action="{% url 'daotao:gui_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn gửi duyệt chương trình này?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-paper-plane mr-1"></i> Gửi duyệt
+            </button>
+        </form>
+        {% endif %}
+
+        {% if ctdt.trang_thai == 'PENDING_APPROVAL' %}
+            {% if perms.daotao.can_approve_ctdt %}
+            <form action="{% url 'daotao:xu_ly_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT chương trình này?');">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-primary">
-                    <i class="fas fa-paper-plane mr-1"></i> Gửi duyệt
+                <input type="hidden" name="action" value="approve">
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-check mr-1"></i> Phê duyệt
                 </button>
             </form>
             {% endif %}
 
-            {% if ctdt.trang_thai == 'PENDING_APPROVAL' %}
-                {% if perms.daotao.can_approve_ctdt %}
-                <form action="{% url 'daotao:xu_ly_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn PHÊ DUYỆT chương trình ini tidak?');">
-                    {% csrf_token %}
-                    <input type="hidden" name="action" value="approve">
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-check mr-1"></i> Phê duyệt
-                    </button>
-                </form>
-                {% endif %}
-
-                {% if perms.daotao.can_reject_ctdt %}
-                <!-- Button to trigger modal -->
-                <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#rejectModal">
-                    <i class="fas fa-times mr-1"></i> Yêu cầu chỉnh sửa
-                </button>
-
-                <!-- Modal -->
-                <div class="modal fade" id="rejectModal" tabindex="-1" role="dialog" aria-labelledby="rejectModalLabel" aria-hidden="true">
-                    <div class="modal-dialog" role="document">
-                        <div class="modal-content">
-                            <form action="{% url 'daotao:xu_ly_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST">
-                                {% csrf_token %}
-                                <input type="hidden" name="action" value="reject">
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="rejectModalLabel">Yêu cầu chỉnh sửa Chương trình Đào tạo</h5>
-                                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                                        <span aria-hidden="true">&times;</span>
-                                    </button>
-                                </div>
-                                <div class="modal-body">
-                                    <div class="form-group">
-                                        <label for="rejection_reason">Lý do yêu cầu chỉnh sửa:</label>
-                                        <textarea class="form-control" id="rejection_reason" name="ly_do" rows="4" required></textarea>
-                                    </div>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
-                                    <button type="submit" class="btn btn-primary">Gửi yêu cầu</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
+            {% if perms.daotao.can_reject_ctdt %}
+            <button type="button" class="btn btn-danger" data-toggle="modal" data-target="#rejectModal">
+                <i class="fas fa-times mr-1"></i> Yêu cầu chỉnh sửa
+            </button>
             {% endif %}
+        {% endif %}
 
-            {% if ctdt.trang_thai == 'APPROVED' and perms.daotao.can_create_new_version %}
-            <form action="{% url 'daotao:tao_phien_ban_moi_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn tạo một phiên bản mới từ chương trình đào tạo ini tidak?');">
-                {% csrf_token %}
-                <button type="submit" class="btn btn-info">
-                    <i class="fas fa-copy mr-1"></i> Tạo phiên bản mới
-                </button>
-            </form>
-            {% endif %}
-        </div>
-        <hr>
+        {% if ctdt.trang_thai == 'APPROVED' and perms.daotao.can_create_new_version %}
+        <form action="{% url 'daotao:tao_phien_ban_moi_ctdt' pk_ctdt=ctdt.pk %}" method="POST" style="display: inline;" onsubmit="return confirm('Bạn có chắc chắn muốn tạo một phiên bản mới từ chương trình đào tạo này?');">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-info">
+                <i class="fas fa-copy mr-1"></i> Tạo phiên bản mới
+            </button>
+        </form>
+        {% endif %}
+    </div>
+</div>
 
+<!-- Main Content Card -->
+<div class="card">
+    <div class="card-header p-0">
         <ul class="nav nav-tabs" id="ctdtTab" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="info-tab" data-toggle="tab" data-target="#info-pane" type="button" role="tab" aria-controls="info-pane" aria-selected="true">Thông tin chung</button>
+                <button class="nav-link" id="info-tab" data-toggle="tab" data-target="#info-pane" type="button" role="tab" aria-controls="info-pane" aria-selected="false">Thông tin chung</button>
             </li>
             <li class="nav-item" role="presentation">
                 <button class="nav-link" id="po-plo-tab" data-toggle="tab" data-target="#po-plo-pane" type="button" role="tab" aria-controls="po-plo-pane" aria-selected="false">Mục tiêu & CĐR</button>
@@ -140,68 +180,99 @@
         
         <div class="tab-content" id="ctdtTabContent">
             <!-- Tab Thông tin chung -->
-            <div class="tab-pane fade show active p-3" id="info-pane" role="tabpanel" aria-labelledby="info-tab">
-                <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="tab-pane fade show active" id="info-pane" role="tabpanel" aria-labelledby="info-tab">
+                <div class="section-title">
                     <h5>Thông tin chung về Chương trình Đào tạo</h5>
                     {% if perms.daotao.change_chuongtrinhdaotao and ctdt.trang_thai == 'DRAFT' %}
-                        <a href="{% url 'daotao:sua_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-warning btn-sm"><i class="fas fa-edit mr-1"></i> Chỉnh sửa</a>
+                        <a href="{% url 'daotao:sua_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-outline-warning btn-sm"><i class="fas fa-edit mr-1"></i> Chỉnh sửa</a>
                     {% endif %}
                 </div>
                 <div class="row">
                     <div class="col-md-6">
-                        <dl class="row">
-                            <dt class="col-sm-5">Tên chương trình (Tiếng Việt):</dt>
+                        <dl class="row details-grid">
+                            <dt class="col-sm-5"><i class="fas fa-info-circle text-primary mr-2"></i>Tên (Tiếng Việt)</dt>
                             <dd class="col-sm-7">{{ ctdt.ten_nganh_ctdt }}</dd>
 
-                            <dt class="col-sm-5">Tên chương trình (Tiếng Anh):</dt>
+                            <dt class="col-sm-5"><i class="fas fa-globe-americas text-primary mr-2"></i>Tên (Tiếng Anh)</dt>
                             <dd class="col-sm-7">{{ ctdt.ten_tieng_anh|default:"N/A" }}</dd>
 
-                            <dt class="col-sm-5">Trình độ đào tạo:</dt>
+                            <dt class="col-sm-5"><i class="fas fa-layer-group text-primary mr-2"></i>Trình độ đào tạo</dt>
                             <dd class="col-sm-7">{{ ctdt.get_trinh_do_dao_tao_display }}</dd>
 
-                            <dt class="col-sm-5">Ngành đào tạo:</dt>
+                            <dt class="col-sm-5"><i class="fas fa-university text-primary mr-2"></i>Ngành đào tạo</dt>
                             <dd class="col-sm-7">{{ ctdt.nganh_hoc_chung.ten_nganh|default:"N/A" }}</dd>
 
-                            <dt class="col-sm-5">Mã ngành:</dt>
+                            <dt class="col-sm-5"><i class="fas fa-barcode text-primary mr-2"></i>Mã ngành</dt>
                             <dd class="col-sm-7">{{ ctdt.ma_nganh_ctdt }}</dd>
 
-                            <dt class="col-sm-5">Loại hình đào tạo:</dt>
+                            <dt class="col-sm-5"><i class="fas fa-chalkboard-teacher text-primary mr-2"></i>Loại hình đào tạo</dt>
                             <dd class="col-sm-7">{{ ctdt.get_hinh_thuc_dao_tao_display }}</dd>
                         </dl>
                     </div>
                     <div class="col-md-6">
-                        <dl class="row">
-                            <dt class="col-sm-5">Số tín chỉ yêu cầu:</dt>
+                        <dl class="row details-grid">
+                            <dt class="col-sm-5"><i class="fas fa-star text-primary mr-2"></i>Số tín chỉ yêu cầu</dt>
                             <dd class="col-sm-7">{{ ctdt.so_tin_chi_yeu_cau|default:"(tự động tính)" }}</dd>
 
-                            <dt class="col-sm-5">Thời gian đào tạo:</dt>
+                            <dt class="col-sm-5"><i class="far fa-clock text-primary mr-2"></i>Thời gian đào tạo</dt>
                             <dd class="col-sm-7">{{ ctdt.thoi_gian_dao_tao|default:"N/A" }} năm</dd>
 
-                            <dt class="col-sm-5">Đối tượng tuyển sinh:</dt>
+                            <dt class="col-sm-5"><i class="fas fa-users text-primary mr-2"></i>Đối tượng tuyển sinh</dt>
                             <dd class="col-sm-7">{{ ctdt.doi_tuong_tuyen_sinh|default:"N/A"|safe }}</dd>
                             
-                            <dt class="col-sm-5">Thang điểm:</dt>
+                            <dt class="col-sm-5"><i class="fas fa-ruler-combined text-primary mr-2"></i>Thang điểm</dt>
                             <dd class="col-sm-7">10</dd>
 
-                            <dt class="col-sm-5">Điều kiện tốt nghiệp:</dt>
+                            <dt class="col-sm-5"><i class="fas fa-graduation-cap text-primary mr-2"></i>Điều kiện tốt nghiệp</dt>
                             <dd class="col-sm-7">{{ ctdt.dieu_kien_tot_nghiep|default:"N/A"|safe }}</dd>
 
-                            <dt class="col-sm-5">Văn bằng tốt nghiệp:</dt>
+                            <dt class="col-sm-5"><i class="fas fa-certificate text-primary mr-2"></i>Văn bằng tốt nghiệp</dt>
                             <dd class="col-sm-7">{{ ctdt.get_van_bang_tot_nghiep_display|default:"N/A" }}</dd>
                         </dl>
                     </div>
                 </div>
-                 <div class="row">
+                 <div class="row mt-3">
                     <div class="col-12">
-                        <hr>
-                        <h6>Chuẩn tham khảo</h6>
-                        <p>{{ ctdt.chuong_trinh_tham_khao|default:"Chưa có thông tin."|safe|linebreaksbr }}</p>
+                        <div class="section-title">
+                           <h5><i class="fas fa-book-open text-primary mr-2"></i>Chuẩn tham khảo</h5>
+                        </div>
+                        <div class="p-3 bg-light rounded">
+                            {{ ctdt.chuong_trinh_tham_khao|default:"Chưa có thông tin."|safe|linebreaksbr }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Modal for Rejection Reason -->
+            <div class="modal fade" id="rejectModal" tabindex="-1" role="dialog" aria-labelledby="rejectModalLabel" aria-hidden="true">
+                <div class="modal-dialog" role="document">
+                    <div class="modal-content">
+                        <form action="{% url 'daotao:xu_ly_duyet_ctdt' pk_ctdt=ctdt.pk %}" method="POST">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="reject">
+                            <div class="modal-header">
+                                <h5 class="modal-title" id="rejectModalLabel">Yêu cầu chỉnh sửa Chương trình Đào tạo</h5>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="form-group">
+                                    <label for="rejection_reason">Lý do yêu cầu chỉnh sửa:</label>
+                                    <textarea class="form-control" id="rejection_reason" name="ly_do" rows="4" required></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                                <button type="submit" class="btn btn-primary">Gửi yêu cầu</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>
 
             <!-- Tab Mục tiêu & CĐR -->
-            <div class="tab-pane fade p-3" id="po-plo-pane" role="tabpanel" aria-labelledby="po-plo-tab">
+            <div class="tab-pane fade" id="po-plo-pane" role="tabpanel" aria-labelledby="po-plo-tab">
                 <ul class="nav nav-pills mb-3" id="po-plo-sub-tab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="po-sub-tab" data-toggle="pill" data-target="#po-sub-pane" type="button" role="tab" aria-controls="po-sub-pane" aria-selected="true">Mục tiêu Đào tạo (PO)</button>
@@ -312,7 +383,7 @@
             </div>
 
             <!-- Tab Cấu trúc chương trình -->
-            <div class="tab-pane fade p-3" id="structure-pane" role="tabpanel" aria-labelledby="structure-tab">
+            <div class="tab-pane fade" id="structure-pane" role="tabpanel" aria-labelledby="structure-tab">
                 <!-- Dashboard Section -->
                 <div class="row mb-4">
                     <div class="col-md-8">
@@ -418,12 +489,12 @@
             </div>
 
             <!-- Tab Kế hoạch học kỳ -->
-            <div class="tab-pane fade p-3" id="plan-pane" role="tabpanel" aria-labelledby="plan-tab">
+            <div class="tab-pane fade" id="plan-pane" role="tabpanel" aria-labelledby="plan-tab">
                 {% include 'daotao/partials/_ke_hoach_giang_day.html' %}
             </div>
 
             <!-- Tab Sơ đồ CTĐT -->
-            <div class="tab-pane fade p-3" id="map-pane" role="tabpanel" aria-labelledby="map-tab">
+            <div class="tab-pane fade" id="map-pane" role="tabpanel" aria-labelledby="map-tab">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <div>
                         <h4>Sơ đồ Chương trình Đào tạo</h4>
@@ -489,7 +560,7 @@
                         </tbody>
                     </table>
                     {% else %}
-                    <p class="text-muted">Chưa có lịch sử thay đổi nào cho chương trình ini.</p>
+                    <p class="text-muted">Chưa có lịch sử thay đổi nào cho chương trình này.</p>
                     {% endif %}
                 </div>
             </div>
@@ -501,21 +572,35 @@
 
 <!-- PO Modal -->
 <div class="modal fade" id="poModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content card card-primary">
             <form id="poForm">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="poModalLabel">Mục tiêu Đào tạo</h5>
+                <div class="card-header modal-header">
+                    <h5 class="card-title modal-title" id="poModalLabel">Mục tiêu Đào tạo</h5>
                     <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
                 </div>
-                <div class="modal-body">
+
+                <div class="card-body modal-body" style="max-height: 70vh; overflow-y: auto;">
                     {% csrf_token %}
-                    {{ po_form.as_p }}
+                    <div class="form-group">
+                        {{ po_form.ma_muc_tieu.label_tag }}<span class="text-danger">*</span>
+                        {{ po_form.ma_muc_tieu|add_class:"form-control" }}
+                        {% for error in po_form.ma_muc_tieu.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group">
+                        {{ po_form.noi_dung.label_tag }}<span class="text-danger">*</span>
+                        {{ po_form.noi_dung|add_class:"form-control" }}
+                        {% for error in po_form.noi_dung.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                <div class="card-footer modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-primary">Lưu</button>
                 </div>
             </form>
@@ -525,7 +610,7 @@
 
 <!-- PLO Modal -->
 <div class="modal fade" id="ploModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-lg" role="document"> {# Changed to modal-lg #}
         <div class="modal-content">
             <form id="ploForm">
                 <div class="modal-header">
@@ -536,7 +621,44 @@
                 </div>
                 <div class="modal-body">
                     {% csrf_token %}
-                    {{ plo_form.as_p }}
+                    <div class="form-group mb-3">
+                        {{ plo_form.ma_cdr.label_tag }}
+                        {{ plo_form.ma_cdr|add_class:"form-control" }}
+                        {% if plo_form.ma_cdr.help_text %}
+                            <small class="form-text text-muted">{{ plo_form.ma_cdr.help_text }}</small>
+                        {% endif %}
+                        {% for error in plo_form.ma_cdr.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group mb-3">
+                        {{ plo_form.noi_dung.label_tag }}
+                        {{ plo_form.noi_dung|add_class:"form-control" }}
+                        {% if plo_form.noi_dung.help_text %}
+                            <small class="form-text text-muted">{{ plo_form.noi_dung.help_text }}</small>
+                        {% endif %}
+                        {% for error in plo_form.noi_dung.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="form-group mb-3">
+                        {{ plo_form.loai_cdr.label_tag }}
+                        {{ plo_form.loai_cdr|add_class:"form-control" }}
+                        {% if plo_form.loai_cdr.help_text %}
+                            <small class="form-text text-muted">{{ plo_form.loai_cdr.help_text }}</small>
+                        {% endif %}
+                        {% for error in plo_form.loai_cdr.errors %}
+                            <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <h6 class="mt-3 mb-2">Đáp ứng Mục tiêu Đào tạo (PO):</h6>
+                    <div class="checkbox-list-container border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                        {{ plo_form.dap_ung_muc_tieu }}
+                    </div>
+                    {% for error in plo_form.dap_ung_muc_tieu.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                    {% endfor %}
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
@@ -572,9 +694,16 @@
 </div>
 {% endblock %}
 
+{% load static %} {# Ensure static files are loaded if needed for other scripts #}
+
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+<!-- Embed JSON data for Chart.js in hidden elements -->
+<script id="pieChartLabels" type="application/json">{{ pie_chart_labels_json|safe }}</script>
+<script id="pieChartData" type="application/json">{{ pie_chart_data_json|safe }}</script>
+
 <script>
     // Initialize Mermaid
     mermaid.initialize({ startOnLoad: false, theme: 'base', themeVariables: { 'primaryColor': '#f4f4f4', 'primaryTextColor': '#333' } });
@@ -781,10 +910,37 @@ $(document).ready(function() {
 
     // --- Chart.js Pie Chart ---
     var pieChartCanvas = $('#creditsPieChart').get(0).getContext('2d');
+
+    var labelsData;
+    var chartData;
+
+    try {
+        var rawLabels = document.getElementById('pieChartLabels').textContent;
+        var rawData = document.getElementById('pieChartData').textContent;
+
+        console.log("Raw labels textContent:", rawLabels);
+        console.log("Raw data textContent:", rawData);
+
+        labelsData = JSON.parse(rawLabels);
+        chartData = JSON.parse(rawData);
+
+        // Filter out any null or "None" values in labels and data
+        labelsData = labelsData.map(label => label === null || label === "None" ? "" : label);
+        chartData = chartData.map(value => (value === null || value === "None" || isNaN(value)) ? 0 : value);
+
+        console.log("Filtered labelsData:", labelsData);
+        console.log("Filtered chartData:", chartData);
+
+    } catch (e) {
+        console.error("Error parsing JSON data for Chart.js:", e);
+        labelsData = []; // Default to empty array on error
+        chartData = [];  // Default to empty array on error
+    }
+
     var pieData = {
-        labels: JSON.parse('{{ pie_chart_labels_json|safe }}'),
+        labels: labelsData,
         datasets: [{
-            data: JSON.parse('{{ pie_chart_data_json|safe }}'),
+            data: chartData,
             backgroundColor: ['#f56954', '#00a65a', '#f39c12', '#00c0ef', '#3c8dbc', '#d2d6de', '#a481d0', '#ff851b', '#01ff70', '#39cccc'],
         }]
     };
@@ -792,7 +948,7 @@ $(document).ready(function() {
         maintainAspectRatio: false,
         responsive: true,
         legend: {
-            position: 'right',
+            position: 'top',
             labels: {
                 padding: 10,
                 boxWidth: 12
@@ -806,37 +962,18 @@ $(document).ready(function() {
     });
 
 
-    // PO Modal Logic
-    $('#poModal').on('show.bs.modal', function (event) {
-        var button = $(event.relatedTarget);
-        var action = button.data('action');
-        var modal = $(this);
+    // PO Modal Logic for adding new PO
+    $('[data-target="#poModal"][data-action="add"]').on('click', function() {
+        var modal = $('#poModal');
         var form = modal.find('#poForm');
+        var action = $(this).data('action');
+
         form.attr('data-action', action);
         form[0].reset();
-
-        if (action === 'add') {
-            modal.find('.modal-title').text('Thêm mới Mục tiêu Đào tạo');
-            form.attr('action', `{% url 'daotao:api_them_po' pk_ctdt=ctdt.pk %}`);
-            form.attr('data-pk', '');
-        } else if (action === 'edit') {
-            var pk = button.data('pk');
-            modal.find('.modal-title').text('Cập nhật Mục tiêu Đào tạo');
-            form.attr('action', `{% url 'daotao:api_sua_po' pk_po=0 %}`.replace('0', pk));
-            form.attr('data-pk', pk);
-
-            $.ajax({
-                url: `{% url 'daotao:api_get_po_details' pk_po=0 %}`.replace('0', pk),
-                type: 'GET',
-                success: function(data) {
-                    $('#id_ma_muc_tieu').val(data.ma_muc_tieu);
-                    $('#id_noi_dung').val(data.noi_dung);
-                },
-                error: function() {
-                    alert('Không thể tải dữ liệu Mục tiêu Đào tạo.');
-                }
-            });
-        }
+        modal.find('.modal-title').text('Thêm mới Mục tiêu Đào tạo');
+        form.attr('action', `{% url 'daotao:api_them_po' pk_ctdt=ctdt.pk %}`);
+        form.attr('data-pk', '');
+        modal.modal('show');
     });
 
     $('#poForm').on('submit', function(e) {
@@ -878,10 +1015,32 @@ $(document).ready(function() {
     // Edit PO button click handler
     $('#poTable').on('click', '.btn-edit-po', function() {
         var pk = $(this).data('pk');
-        $('#poModal').modal('show');
-        $('#poModal').find('.modal-title').text('Cập nhật Mục tiêu Đào tạo');
-        $('#poModal').find('#poForm').attr('data-action', 'edit');
-        $('#poModal').find('#poForm').attr('data-pk', pk);
+        var modal = $('#poModal');
+        var form = modal.find('#poForm');
+
+        // Set attributes for edit action
+        modal.find('.modal-title').text('Cập nhật Mục tiêu Đào tạo');
+        form.attr('data-action', 'edit');
+        form.attr('data-pk', pk);
+        form.attr('action', `{% url 'daotao:api_sua_po' pk_po=0 %}`.replace('0', pk));
+        form[0].reset();
+
+        // Fetch PO details and populate form
+        $.ajax({
+            url: `{% url 'daotao:api_get_po_details' pk_po=0 %}`.replace('0', pk),
+            type: 'GET',
+            success: function(data) {
+                // Populate form with fetched data
+                form.find('#id_ma_muc_tieu').val(data.ma_muc_tieu);
+                form.find('#id_noi_dung').val(data.noi_dung);
+                
+                // Show the modal
+                modal.modal('show');
+            },
+            error: function() {
+                alert('Không thể tải dữ liệu Mục tiêu Đào tạo.');
+            }
+        });
     });
 
     // PLO Modal Logic
@@ -966,11 +1125,65 @@ $(document).ready(function() {
     // Edit PLO button click handler
     $('#plo-sub-pane').on('click', '.btn-edit-plo', function() {
         var pk = $(this).data('pk');
-        $('#ploModal').modal('show');
-        $('#ploModal').find('.modal-title').text('Cập nhật Chuẩn Đầu ra');
-        $('#ploModal').find('#ploForm').attr('data-action', 'edit');
-        $('#ploModal').find('#ploForm').attr('data-pk', pk);
-        // The 'show.bs.modal' event handler will fetch and populate the data
+        var modal = $('#ploModal');
+        var form = modal.find('#ploForm');
+        
+        modal.find('.modal-title').text('Cập nhật Chuẩn Đầu ra');
+        form.attr('data-action', 'edit');
+        form.attr('data-pk', pk);
+        
+        // Manually trigger the show event logic
+        modal.trigger('show.bs.modal');
+        modal.modal('show');
+    });
+    
+    // PLO Modal Logic
+    $('#ploModal').on('show.bs.modal', function (event) {
+        var modal = $(this);
+        var form = modal.find('#ploForm');
+        var action = form.attr('data-action'); // Get action from form attribute
+        
+        if (!action && event.relatedTarget) {
+            // Fallback for direct data-toggle calls
+            action = $(event.relatedTarget).data('action');
+            form.attr('data-action', action);
+        }
+
+        form[0].reset(); // Clear form fields
+
+        if (action === 'add') {
+            modal.find('.modal-title').text('Thêm mới Chuẩn Đầu ra');
+            form.attr('action', `{% url 'daotao:api_them_plo' pk_ctdt=ctdt.pk %}`);
+            form.attr('data-pk', ''); // Clear PK for add
+            form.find('input[name="dap_ung_muc_tieu"]').prop('checked', false);
+        } else if (action === 'edit') {
+            var pk = form.attr('data-pk'); // Get pk from form attribute
+            if (!pk) return; // Don't proceed if pk is not set
+
+            modal.find('.modal-title').text('Cập nhật Chuẩn Đầu ra');
+            form.attr('action', `{% url 'daotao:api_sua_plo' pk_cdr=0 %}`.replace('0', pk));
+
+            // Fetch PLO details and populate the form
+            $.ajax({
+                url: `{% url 'daotao:api_get_plo_details' pk_cdr=0 %}`.replace('0', pk),
+                type: 'GET',
+                success: function(data) {
+                    form.find('#id_ma_cdr').val(data.ma_cdr);
+                    form.find('#id_noi_dung').val(data.noi_dung);
+                    form.find('#id_loai_cdr').val(data.loai_cdr);
+                    form.find('input[name="dap_ung_muc_tieu"]').prop('checked', false);
+                    if (data.dap_ung_muc_tieu) {
+                        data.dap_ung_muc_tieu.forEach(function(po_pk) {
+                            form.find(`input[name="dap_ung_muc_tieu"][value="${po_pk}"]`).prop('checked', true);
+                        });
+                    }
+                },
+                error: function() {
+                    alert('Không thể tải dữ liệu Chuẩn Đầu ra.');
+                    modal.modal('hide');
+                }
+            });
+        }
     });
 
     // Delete PO
@@ -1012,17 +1225,39 @@ $(document).ready(function() {
     });
 
 
-    // Activate tab based on URL hash
+    // Activate tab based on URL hash and save tab state in localStorage
     var hash = window.location.hash;
-    if (hash) {
-        // Use a more specific selector and ensure it's triggered after the page is fully ready
-        setTimeout(function() {
-            var tabButton = $('.nav-tabs button[data-target="' + hash + '"]');
-            if (tabButton.length) {
-                tabButton.tab('show');
-            }
-        }, 100); // A small delay can help ensure all elements are ready
+    var activeTab = localStorage.getItem('activeCtdtTab');
+
+    function activateTab(tabId) {
+        var tabButton = $('.nav-tabs button[data-target="' + tabId + '"]');
+        if (tabButton.length) {
+            tabButton.tab('show');
+        }
     }
+
+    if (hash) {
+        setTimeout(function() {
+            activateTab(hash);
+        }, 100);
+    } else if (activeTab) {
+        setTimeout(function() {
+            activateTab(activeTab);
+        }, 100);
+    } else {
+        // Default to first tab if none saved
+        setTimeout(function() {
+            $('.nav-tabs button').first().tab('show');
+        }, 100);
+    }
+
+    // Save tab state on tab change
+    $('[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        var target = $(e.target).data('target');
+        if (target) {
+            localStorage.setItem('activeCtdtTab', target);
+        }
+    });
 
 
     // --- Staff Tab Logic ---
@@ -1254,18 +1489,20 @@ $(document).ready(function() {
 <style>
     .flowchart-wrapper {
         overflow-x: auto;
+        overflow-y: auto; /* Added vertical scroll */
         border: 1px solid #ddd;
         padding: 1rem;
         background-color: #fdfdfd;
         cursor: grab;
+        max-height: 700px; /* Limit max height for vertical scroll */
     }
     .mermaid {
         text-align: center;
     }
     .mermaid svg {
         max-width: none;
-        min-width: 2000px; /* Force a much larger base width for initial render */
-        min-height: 1000px; /* Ensure ample vertical space */
+        min-width: 1200px; /* Reduced min-width for better fit */
+        min-height: 800px; /* Adjusted min-height */
         height: auto;
         transition: transform 0.2s ease-in-out; /* Smooth zoom transition */
     }
