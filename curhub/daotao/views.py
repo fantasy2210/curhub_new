@@ -190,6 +190,8 @@ def chi_tiet_ctdt(request, pk_ctdt):
     # Sắp xếp dict theo key (học kỳ)
     hoc_phan_theo_hoc_ky = dict(sorted(hoc_phan_theo_hoc_ky.items()))
 
+    danh_muc_kien_thuc_list = DanhMucKienThuc.objects.all()
+
     context = {
         'ctdt': chuong_trinh,
         'page_title': f"Chi tiết CTĐT: {chuong_trinh.ten_nganh_ctdt}",
@@ -206,8 +208,8 @@ def chi_tiet_ctdt(request, pk_ctdt):
         'plo_form': plo_form,
         'lich_su_thay_doi': LichSuThayDoiCTDT.objects.filter(chuong_trinh_dao_tao=chuong_trinh),
         # Dữ liệu cho Kế hoạch giảng dạy
-        'hoc_phan_theo_hoc_ky': hoc_phan_theo_hoc_ky,
-        'hoc_phan_chua_phan_bo': hoc_phan_chua_phan_bo,
+        'hoc_phan_list': hoc_phan_list,
+        'danh_muc_kien_thuc_list': danh_muc_kien_thuc_list,
     }
     return render(request, 'daotao/chi_tiet_ctdt.html', context)
 
@@ -1055,8 +1057,54 @@ def xoa_hoc_phan_ctdt(request, pk_chi_tiet_hp):
     return render(request, 'daotao/xoa_hoc_phan_ctdt_confirm.html', context)
 @login_required
 @require_http_methods(["POST"])
+@permission_required('daotao.change_chitiethocphantrongctdt', raise_exception=True)
 def update_chi_tiet_hoc_phan_inline(request):
-    return JsonResponse({'status': 'error', 'message': 'Chức năng chưa được triển khai.'})
+    try:
+        pk = request.POST.get('pk')
+        field = request.POST.get('field')
+        value = request.POST.get('value')
+
+        chi_tiet_hp = get_object_or_404(ChiTietHocPhanTrongCTDT, pk=pk)
+
+        if chi_tiet_hp.chuong_trinh_dao_tao.trang_thai != 'DRAFT':
+            return JsonResponse({'status': 'error', 'message': 'Chỉ có thể chỉnh sửa khi CTĐT ở trạng thái "Bản nháp".'}, status=403)
+
+        allowed_fields = [
+            'hoc_ky_du_kien', 'tin_chi_ly_thuyet_apdung', 'tin_chi_thuc_hanh_apdung',
+            'so_gio_ly_thuyet_apdung', 'so_gio_thuc_hanh_apdung', 'la_bat_buoc', 'danh_muc_kien_thuc'
+        ]
+
+        if field not in allowed_fields:
+            return JsonResponse({'status': 'error', 'message': f'Trường "{field}" không được phép chỉnh sửa.'}, status=400)
+
+        # Type conversion and validation
+        if field == 'danh_muc_kien_thuc':
+            if value:
+                value = get_object_or_404(DanhMucKienThuc, pk=value)
+            else:
+                value = None
+        elif field == 'la_bat_buoc':
+            value = value.lower() in ['true', '1']
+        elif value == '':
+             value = None
+        else:
+            # For numeric fields
+            try:
+                # Handle potential float values for credits
+                if 'tin_chi' in field:
+                    value = float(value)
+                else:
+                    value = int(value)
+            except (ValueError, TypeError):
+                return JsonResponse({'status': 'error', 'message': 'Giá trị không hợp lệ.'}, status=400)
+
+        setattr(chi_tiet_hp, field, value)
+        chi_tiet_hp.save(update_fields=[field])
+
+        return JsonResponse({'status': 'success', 'message': 'Cập nhật thành công!'})
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 @login_required
 @require_http_methods(["POST"])

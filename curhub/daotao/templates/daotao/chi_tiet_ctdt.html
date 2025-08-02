@@ -1277,6 +1277,104 @@ $(document).ready(function() {
         cursor: pointer;
     }
 </style>
+
+<script>
+$(document).ready(function() {
+    // --- Generic Inline Editing for Kế hoạch học kỳ tab ---
+    var activeEditCell = null;
+
+    function switchToViewMode($cell) {
+        if ($cell) {
+            $cell.find('.edit-value').hide();
+            $cell.find('.display-value').show();
+            activeEditCell = null;
+        }
+    }
+
+    $('#plan-pane').on('click', '.editable-cell', function() {
+        var $td = $(this);
+        // If another cell is being edited, switch it back to view mode first
+        if (activeEditCell && activeEditCell[0] !== $td[0]) {
+            switchToViewMode(activeEditCell);
+        }
+        
+        activeEditCell = $td;
+        $td.find('.display-value').hide();
+        $td.find('.edit-value').show().focus();
+    });
+
+    function saveChange($input) {
+        var $td = $input.closest('td');
+        var field = $td.data('field');
+        var pk = $input.closest('tr').data('cthp-pk');
+        var value = $input.val();
+        var url = "{% url 'daotao:update_chi_tiet_hoc_phan_inline' %}";
+        var csrfToken = "{{ csrf_token }}";
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: {
+                pk: pk,
+                field: field,
+                value: value,
+                csrfmiddlewaretoken: csrfToken
+            },
+            success: function(response) {
+                if (response.status === 'success') {
+                    toastr.success(response.message);
+                    // Update display value
+                    var $display = $td.find('.display-value');
+                    if ($input.is('select')) {
+                        var selectedText = $input.find('option:selected').text().trim();
+                        if (field === 'la_bat_buoc') {
+                             $display.html(value === 'True' ? '<span class="badge badge-success">Bắt buộc</span>' : '<span class="badge badge-warning">Tự chọn</span>');
+                        } else {
+                             $display.text(selectedText);
+                        }
+                    } else {
+                        $display.text(value);
+                    }
+                } else {
+                    toastr.error('Lỗi: ' + response.message);
+                    // Revert to original value on error
+                    $input.val($display.text()); 
+                }
+            },
+            error: function(jqXHR) {
+                var errorMsg = 'Lỗi máy chủ.';
+                if (jqXHR.responseJSON && jqXHR.responseJSON.message) {
+                    errorMsg = jqXHR.responseJSON.message;
+                }
+                toastr.error(errorMsg);
+            },
+            complete: function() {
+                switchToViewMode($td);
+            }
+        });
+    }
+
+    // Save on change (for select) or blur (for input)
+    $('#plan-pane').on('change', '.edit-value', function() {
+        saveChange($(this));
+    });
+
+    $('#plan-pane').on('blur', 'input.edit-value', function() {
+        saveChange($(this));
+    });
+
+    // Allow pressing Enter to save input fields
+    $('#plan-pane').on('keydown', 'input.edit-value', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            $(this).blur(); // Trigger the blur event to save
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            switchToViewMode($(this).closest('td'));
+        }
+    });
+});
+</script>
 {% endblock scripts %}
 
 </final_file_content>

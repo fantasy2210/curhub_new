@@ -1,99 +1,73 @@
-<div class="accordion" id="keHoachGiangDayAccordion">
-    {% for hoc_ky, data in hoc_phan_theo_hoc_ky.items %}
-    <div class="card">
-        <div class="card-header" id="heading-{{ hoc_ky }}">
-            <h2 class="mb-0">
-                <button class="btn btn-link btn-block text-left" type="button" data-toggle="collapse" data-target="#collapse-{{ hoc_ky }}" aria-expanded="true" aria-controls="collapse-{{ hoc_ky }}">
-                    HỌC KỲ {{ hoc_ky }}
-                    <span class="float-right">Tổng số tín chỉ: {{ data.tong_tin_chi }}</span>
-                </button>
-            </h2>
-        </div>
-
-        <div id="collapse-{{ hoc_ky }}" class="collapse show" aria-labelledby="heading-{{ hoc_ky }}" data-parent="#keHoachGiangDayAccordion">
-            <div class="card-body p-0">
-                <table class="table table-sm table-hover table-bordered mb-0">
-                    <thead class="thead-light">
-                        <tr>
-                            <th style="width: 10%;">Mã HP</th>
-                            <th>Tên học phần</th>
-                            <th style="width: 8%;">Số TC</th>
-                            <th style="width: 15%;">Khối kiến thức</th>
-                            <th style="width: 10%;">Bắt buộc</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for hp_detail in data.hoc_phan_list %}
-                        <tr>
-                            <td>{{ hp_detail.hoc_phan.ma_hoc_phan }}</td>
-                            <td>
-                                <a href="#" class="view-syllabus-btn" data-toggle="modal" data-target="#deCuongChiTietModal" data-hoc-phan-pk="{{ hp_detail.hoc_phan.pk }}">
-                                    {{ hp_detail.hoc_phan.ten_hoc_phan }}
-                                </a>
-                            </td>
-                            <td>{{ hp_detail.tong_so_tin_chi_apdung }}</td>
-                            <td>{{ hp_detail.danh_muc_kien_thuc.ten_danh_muc|default:"Chưa phân loại" }}</td>
-                            <td>
-                                {% if hp_detail.la_bat_buoc %}
-                                    <span class="badge badge-success">Bắt buộc</span>
-                                {% else %}
-                                    <span class="badge badge-warning">Tự chọn</span>
-                                {% endif %}
-                            </td>
-                        </tr>
+<div class="table-responsive">
+    <table class="table table-sm table-hover table-bordered mb-0" id="keHoachHocKyTable">
+        <thead class="thead-light">
+            <tr>
+                <th style="width: 5%;">Học kỳ</th>
+                <th style="width: 8%;">Mã HP</th>
+                <th>Tên học phần</th>
+                <th style="width: 5%;">TC LT</th>
+                <th style="width: 5%;">TC TH</th>
+                <th style="width: 5%;">Tiết LT</th>
+                <th style="width: 5%;">Tiết TH</th>
+                <th style="width: 15%;">Khối kiến thức</th>
+                <th style="width: 8%;">Bắt buộc</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for hp_detail in hoc_phan_list %}
+            <tr data-cthp-pk="{{ hp_detail.pk }}">
+                <td class="editable-cell" data-field="hoc_ky_du_kien" data-type="number">
+                    <span class="display-value">{{ hp_detail.hoc_ky_du_kien|default:"" }}</span>
+                    <input type="number" class="form-control form-control-sm edit-value" value="{{ hp_detail.hoc_ky_du_kien|default:"" }}" style="display: none; width: 70px;">
+                </td>
+                <td>{{ hp_detail.hoc_phan.ma_hoc_phan }}</td>
+                <td>
+                    <a href="#" class="view-syllabus-btn" data-toggle="modal" data-target="#deCuongChiTietModal" data-hoc-phan-pk="{{ hp_detail.hoc_phan.pk }}">
+                        {{ hp_detail.hoc_phan.ten_hoc_phan }}
+                    </a>
+                </td>
+                <td class="editable-cell" data-field="tin_chi_ly_thuyet_apdung" data-type="number">
+                    <span class="display-value">{{ hp_detail.tin_chi_ly_thuyet_apdung }}</span>
+                    <input type="number" step="0.5" class="form-control form-control-sm edit-value" value="{{ hp_detail.tin_chi_ly_thuyet_apdung }}" style="display: none; width: 70px;">
+                </td>
+                <td class="editable-cell" data-field="tin_chi_thuc_hanh_apdung" data-type="number">
+                    <span class="display-value">{{ hp_detail.tin_chi_thuc_hanh_apdung }}</span>
+                    <input type="number" step="0.5" class="form-control form-control-sm edit-value" value="{{ hp_detail.tin_chi_thuc_hanh_apdung }}" style="display: none; width: 70px;">
+                </td>
+                <td class="editable-cell" data-field="so_gio_ly_thuyet_apdung" data-type="number">
+                    <span class="display-value">{{ hp_detail.so_gio_ly_thuyet_apdung }}</span>
+                    <input type="number" class="form-control form-control-sm edit-value" value="{{ hp_detail.so_gio_ly_thuyet_apdung }}" style="display: none; width: 70px;">
+                </td>
+                <td class="editable-cell" data-field="so_gio_thuc_hanh_apdung" data-type="number">
+                    <span class="display-value">{{ hp_detail.so_gio_thuc_hanh_apdung }}</span>
+                    <input type="number" class="form-control form-control-sm edit-value" value="{{ hp_detail.so_gio_thuc_hanh_apdung }}" style="display: none; width: 70px;">
+                </td>
+                <td class="editable-cell" data-field="danh_muc_kien_thuc" data-type="select">
+                    <span class="display-value">{{ hp_detail.danh_muc_kien_thuc.ten_danh_muc|default:"Chưa phân loại" }}</span>
+                    <select class="form-control form-control-sm edit-value" style="display: none;">
+                        <option value="">---------</option>
+                        {% for dmkt in danh_muc_kien_thuc_list %}
+                        <option value="{{ dmkt.pk }}" {% if dmkt.pk == hp_detail.danh_muc_kien_thuc.pk %}selected{% endif %}>
+                            {{ dmkt.ten_danh_muc }}
+                        </option>
                         {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
-
-    {% if hoc_phan_chua_phan_bo %}
-    <div class="card">
-        <div class="card-header bg-warning" id="heading-unassigned">
-            <h2 class="mb-0">
-                <button class="btn btn-link btn-block text-left text-dark" type="button" data-toggle="collapse" data-target="#collapse-unassigned" aria-expanded="true" aria-controls="collapse-unassigned">
-                    Học phần chưa phân bổ
-                </button>
-            </h2>
-        </div>
-        <div id="collapse-unassigned" class="collapse show" aria-labelledby="heading-unassigned" data-parent="#keHoachGiangDayAccordion">
-            <div class="card-body p-0">
-                <table class="table table-sm table-hover table-bordered mb-0">
-                    <thead class="thead-light">
-                        <tr>
-                            <th style="width: 10%;">Mã HP</th>
-                            <th>Tên học phần</th>
-                            <th style="width: 8%;">Số TC</th>
-                            <th style="width: 15%;">Khối kiến thức</th>
-                            <th style="width: 10%;">Bắt buộc</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for hp_detail in hoc_phan_chua_phan_bo %}
-                        <tr>
-                            <td>{{ hp_detail.hoc_phan.ma_hoc_phan }}</td>
-                            <td>
-                                <a href="#" class="view-syllabus-btn" data-toggle="modal" data-target="#deCuongChiTietModal" data-hoc-phan-pk="{{ hp_detail.hoc_phan.pk }}">
-                                    {{ hp_detail.hoc_phan.ten_hoc_phan }}
-                                </a>
-                            </td>
-                            <td>{{ hp_detail.tong_so_tin_chi_apdung }}</td>
-                            <td>{{ hp_detail.danh_muc_kien_thuc.ten_danh_muc|default:"Chưa phân loại" }}</td>
-                            <td>
-                                {% if hp_detail.la_bat_buoc %}
-                                    <span class="badge badge-success">Bắt buộc</span>
-                                {% else %}
-                                    <span class="badge badge-warning">Tự chọn</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    {% endif %}
+                    </select>
+                </td>
+                <td class="editable-cell" data-field="la_bat_buoc" data-type="select">
+                    <span class="display-value">
+                        {% if hp_detail.la_bat_buoc %}
+                            <span class="badge badge-success">Bắt buộc</span>
+                        {% else %}
+                            <span class="badge badge-warning">Tự chọn</span>
+                        {% endif %}
+                    </span>
+                    <select class="form-control form-control-sm edit-value" style="display: none;">
+                        <option value="True" {% if hp_detail.la_bat_buoc %}selected{% endif %}>Bắt buộc</option>
+                        <option value="False" {% if not hp_detail.la_bat_buoc %}selected{% endif %}>Tự chọn</option>
+                    </select>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
