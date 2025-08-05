@@ -4,7 +4,8 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Row, Column, Fieldset, Submit, HTML
 from .models import (
     NganhDaoTao, ChuongTrinhDaoTao, HocPhan, ChiTietHocPhanTrongCTDT,
-    DonViDaoTao, MucTieuDaoTao, ChuanDauRa, DanhMucKienThuc, DeCuongHocPhan, ChuanDauRaHocPhan, NoiDungChiTietDeCuong, HinhThucDanhGia
+    DonViDaoTao, MucTieuDaoTao, ChuanDauRa, DanhMucKienThuc, DeCuongHocPhan, ChuanDauRaHocPhan, NoiDungChiTietDeCuong, HinhThucDanhGia,
+    GiangVien, PhanCongGiangDay
 )
 
 class NganhDaoTaoForm(forms.ModelForm):
@@ -404,3 +405,20 @@ HinhThucDanhGiaFormSet = inlineformset_factory(
     extra=1,
     can_delete=True
 )
+
+class GiangVienForm(forms.ModelForm):
+    class Meta:
+        model = GiangVien
+        fields = '__all__'
+        widgets = {
+            'ngay_sinh': forms.DateInput(attrs={'type': 'date'}),
+            'co_quan_cong_tac': forms.Select(attrs={'class': 'select2'}),
+        }
+
+class PhanCongForm(forms.ModelForm):
+    class Meta:
+        model = PhanCongGiangDay
+        fields = ['giang_vien', 'vai_tro']
+        widgets = {
+            'giang_vien': forms.Select(attrs={'class': 'select2'}),
+        }

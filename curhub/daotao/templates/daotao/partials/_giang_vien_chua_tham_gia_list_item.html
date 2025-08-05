@@ -1,0 +1,12 @@
+{% load custom_filters %}
+<div class="list-group-item d-flex justify-content-between align-items-center" id="giang-vien-chua-tham-gia-{{ gv.pk }}">
+    <div>
+        <i class="fas fa-user-graduate mr-2"></i>
+        {{ gv.ho_ten }} ({{ gv.ma_can_bo }})
+    </div>
+    {% if is_draft %}
+    <button class="btn btn-sm btn-success btn-add-gv" data-gv-pk="{{ gv.pk }}" data-action="add">
+        <i class="fas fa-user-plus"></i> Thêm
+    </button>
+    {% endif %}
+</div>

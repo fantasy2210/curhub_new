@@ -61,6 +61,7 @@ async function renderFlowchart() {
         data.nodes.forEach((node) => {
             const displayName = escapeMermaidString(node.name);
             const displayId = escapeMermaidString(node.original_id);
+            // Use the prefixed ID from the API response
             mermaidSyntax += `    ${node.id}["${displayId}<br/>${displayName}"];\n`;
             if (node.khoi_kien_thuc) {
                 mermaidSyntax += `    style ${node.id} ${getKhoiColor(node.khoi_kien_thuc)}\n`;
@@ -612,140 +613,64 @@ $(document).ready(function () {
     );
   });
 
-  // Handle Add/Remove lecturer actions via AJAX
-  $("#staff-pane").on("click", ".btn-add-gv, .btn-remove-gv", function (e) {
+  // --- Staff Tab Logic (Consolidated Event Handler) ---
+  $("#staff-pane").on("click", ".btn-add-gv, .btn-remove-gv, .btn-phan-cong", function (e) {
     e.preventDefault();
     const button = $(this);
-    const gvPk = button.data("gv-pk");
-    const action = button.hasClass("btn-add-gv") ? "add" : "remove";
-    const url = PAGE2.urls.staff.update;
-    const csrfToken = PAGE2.csrfToken;
 
-    $.ajax({
-      url: url,
-      type: "POST",
-      data: {
-        giang_vien_pk: gvPk,
-        action: action,
-        csrfmiddlewaretoken: csrfToken,
-      },
-      dataType: "json",
-      success: function (response) {
-        if (response.status === "success") {
-          toastr.success(response.message);
-          // Find the lecturer's item using its data-gv-pk
-          const lecturerItem = $(`[data-gv-pk="${gvPk}"]`).closest('.list-group-item');
+    if (button.hasClass("btn-add-gv") || button.hasClass("btn-remove-gv")) {
+      const gvPk = button.data("gv-pk");
+      const action = button.hasClass("btn-add-gv") ? "add" : "remove";
+      const url = PAGE2.urls.staff.update;
+      const csrfToken = PAGE2.csrfToken;
 
-          if (action === "add") {
-            // Remove from available list
-            lecturerItem.remove();
-            // Add to assigned list
-            $("#assigned-lecturers").append(response.lecturer_html);
-          } else { // action === "remove"
-            // Remove from assigned list
-            lecturerItem.remove();
-            // Add to available list
-            $("#available-lecturers").append(response.lecturer_html);
-          }
-          // No need to re-bind all lecturer buttons here, as the elements are moved/added directly.
-          // The event delegation set up in bindLecturerButtons() will still work.
-        } else {
-          toastr.error("Lỗi: " + response.message);
-        }
-      },
-      error: function () {
-        toastr.error("Đã có lỗi xảy ra khi thực hiện thao tác.");
-      },
-    });
-  });
-
-  // Function to bind event handlers for dynamically added buttons
-  function bindLecturerButtons() {
-    // Use event delegation for all lecturer buttons
-    $("#staff-pane")
-      .off("click", ".btn-phan-cong, .btn-remove-gv, .btn-add-gv")
-      .on("click", ".btn-phan-cong, .btn-remove-gv, .btn-add-gv", function () {
-        const $btn = $(this);
-
-        if ($btn.hasClass("btn-phan-cong")) {
-          const gvPk = $btn.data("gv-pk");
-          const gvName = $btn.data("gv-name");
-          const url = PAGE2.urls.staff.getPhanCongForm.replace("0", gvPk);
-
-          $("#modalGvName").text(gvName);
-          $("#phanCongModalBody").html(
-            '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải danh sách học phần...</p>'
-          );
-          $("#phanCongModal").modal("show");
-
-          $.get(url, function (data) {
-            $("#phanCongModalBody").html(data);
-          }).fail(function () {
-            $("#phanCongModalBody").html(
-              "<p class=\"text-danger\">Không thể tải được dữ liệu phân công.</p>"
-            );
-          });
-        }
-      });
-
-    $("#staff-pane")
-      .off("click", "#savePhanCongBtn")
-      .on("click", "#savePhanCongBtn", function () {
-        const form = $("#phanCongForm");
-        const url = PAGE2.urls.staff.savePhanCong;
-        const data = form.serialize();
-
-        $.post(url, data)
-          .done(function (response) {
-            if (response.status === "success") {
-              toastr.success(response.message);
-              $("#phanCongModal").modal("hide");
-              // Dynamically update the assigned courses list
-              $(`#assigned-courses-${response.giang_vien_pk}`).html(
-                response.updated_courses_html
-              );
-            } else {
-              toastr.error("Lỗi: " + response.message);
+      $.ajax({
+        url: url,
+        type: "POST",
+        data: {
+          giang_vien_pk: gvPk,
+          action: action,
+          csrfmiddlewaretoken: csrfToken,
+        },
+        dataType: "json",
+        success: function (response) {
+          if (response.status === "success") {
+            toastr.success(response.message);
+            if (action === "add") {
+              button.closest('.list-group-item').remove();
+              $("#assigned-lecturers").append(response.lecturer_html);
+            } else { // action === "remove"
+              // Remove from assigned list by traversing from the button
+              button.closest('.list-group-item').remove();
+              // Add to available list
+              $("#available-lecturers").append(response.lecturer_html);
             }
-          })
-          .fail(function () {
-            toastr.error("Đã có lỗi xảy ra khi lưu phân công.");
-          });
+          } else {
+            toastr.error("Lỗi: " + response.message);
+          }
+        },
+        error: function () {
+          toastr.error("Đã có lỗi xảy ra khi thực hiện thao tác.");
+        },
       });
+    } else if (button.hasClass("btn-phan-cong")) {
+      const gvPk = button.data("gv-pk");
+      const gvName = button.data("gv-name");
+      const url = PAGE2.urls.staff.getPhanCongForm.replace("0", gvPk);
 
-    // Ensure buttons are visible after binding
-    $(".btn-phan-cong, .btn-remove-gv, .btn-add-gv").css("display", "inline-block");
-  }
+      $("#modalGvName").text(gvName);
+      $("#phanCongModalBody").html('<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải...</p>');
+      $("#phanCongModal").modal("show");
 
-  // Initial binding of lecturer buttons and ensure buttons are visible
-  bindLecturerButtons();
-  // Ensure buttons are visible on initial load
-  $(".btn-phan-cong, .btn-remove-gv, .btn-add-gv").css("display", "inline-block");
-
-  // Removed re-binding on every AJAX complete, as it's handled by direct DOM manipulation
-  // and event delegation.
-
-  // --- Phan Cong Modal Logic ---
-  $("#staff-pane").on("click", ".btn-phan-cong", function () {
-    const gvPk = $(this).data("gv-pk");
-    const gvName = $(this).data("gv-name");
-    const url = PAGE2.urls.staff.getPhanCongForm.replace("0", gvPk);
-
-    $("#modalGvName").text(gvName);
-    $("#phanCongModalBody").html(
-      '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải...</p>'
-    );
-    $("#phanCongModal").modal("show");
-
-    $.get(url, function (data) {
-      $("#phanCongModalBody").html(data);
-    }).fail(function () {
-      $("#phanCongModalBody").html(
-        '<p class="text-danger">Không thể tải được dữ liệu phân công.</p>'
-      );
-    });
+      $.get(url, function (data) {
+        $("#phanCongModalBody").html(data);
+      }).fail(function () {
+        $("#phanCongModalBody").html('<p class="text-danger">Không thể tải được dữ liệu phân công.</p>');
+      });
+    }
   });
 
+  // --- Phan Cong Modal Save Logic ---
   $("#savePhanCongBtn").on("click", function () {
     const form = $("#phanCongForm");
     if (!PAGE2 || !PAGE2.urls || !PAGE2.urls.staff || !PAGE2.urls.staff.savePhanCong) {

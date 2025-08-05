@@ -1,228 +1,44 @@
 {% extends "base.html" %}
-{% load crispy_forms_tags %}
+{% load widget_tweaks %}
 
 {% block content %}
-<form method="post">
-    {% csrf_token %}
-    <div class="card card-primary card-tabs">
-        <div class="card-header p-0 pt-1">
-            <ul class="nav nav-tabs" id="de-cuong-tabs" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" id="tab-info-tab" data-toggle="pill" href="#tab-info" role="tab" aria-controls="tab-info" aria-selected="true">
-                        <i class="fas fa-info-circle"></i> Thông tin chung
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="tab-clo-tab" data-toggle="pill" href="#tab-clo" role="tab" aria-controls="tab-clo" aria-selected="false">
-                        <i class="fas fa-bullseye"></i> Chuẩn đầu ra (CLO)
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="tab-noidung-tab" data-toggle="pill" href="#tab-noidung" role="tab" aria-controls="tab-noidung" aria-selected="false">
-                        <i class="fas fa-list-alt"></i> Nội dung chi tiết
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="tab-danhgia-tab" data-toggle="pill" href="#tab-danhgia" role="tab" aria-controls="tab-danhgia" aria-selected="false">
-                        <i class="fas fa-check-double"></i> Đánh giá
-                    </a>
-                </li>
-            </ul>
-        </div>
-        <div class="card-body">
-            <div class="tab-content" id="de-cuong-tabs-content">
-                <!-- Tab Thông tin chung -->
-                <div class="tab-pane fade show active" id="tab-info" role="tabpanel" aria-labelledby="tab-info-tab">
-                    {% crispy form %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card card-primary">
+                <div class="card-header">
+                    <h3 class="card-title">{{ page_title }}</h3>
                 </div>
-
-                <!-- Tab Chuẩn đầu ra -->
-                <div class="tab-pane fade" id="tab-clo" role="tabpanel" aria-labelledby="tab-clo-tab">
-                    {{ clo_formset.management_form }}
-                    <div id="clo-formset">
-                        {% for form in clo_formset %}
-                            <div class="clo-form row align-items-center mb-3 p-2 border rounded">
-                                {{ form.id }}
-                                <div class="col-md-2">{{ form.ma_clo|as_crispy_field }}</div>
-                                <div class="col-md-2">{{ form.loai_clo|as_crispy_field }}</div>
-                                <div class="col-md-5">{{ form.noi_dung|as_crispy_field }}</div>
-                                <div class="col-md-2">{{ form.muc_do_bloom|as_crispy_field }}</div>
-                                <div class="col-md-1">{% if form.instance.pk %}{{ form.DELETE|as_crispy_field }}{% endif %}</div>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="card-body">
+                        {% for field in form %}
+                            <div class="form-group">
+                                {{ field.label_tag }}
+                                {% if field.field.widget.input_type == 'checkbox' %}
+                                    <div class="form-check">
+                                        {% render_field field class="form-check-input" %}
+                                        <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    </div>
+                                {% else %}
+                                    {% render_field field class="form-control" %}
+                                {% endif %}
+                                {% if field.help_text %}
+                                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                                {% endif %}
+                                {% for error in field.errors %}
+                                    <div class="invalid-feedback d-block">{{ error }}</div>
+                                {% endfor %}
                             </div>
                         {% endfor %}
                     </div>
-                    <div id="empty-clo-form-template" style="display: none;">
-                        <div class="clo-form row align-items-center mb-3 p-2 border rounded">
-                            <div class="col-md-2">{{ clo_formset.empty_form.ma_clo }}</div>
-                            <div class="col-md-2">{{ clo_formset.empty_form.loai_clo }}</div>
-                            <div class="col-md-5">{{ clo_formset.empty_form.noi_dung }}</div>
-                            <div class="col-md-2">{{ clo_formset.empty_form.muc_do_bloom }}</div>
-                            <div class="col-md-1">{{ clo_formset.empty_form.DELETE }}</div>
-                        </div>
+                    <div class="card-footer">
+                        <button type="submit" class="btn btn-primary">Lưu</button>
+                        <a href="{% url 'daotao:danh_sach_de_cuong' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-secondary">Hủy</a>
                     </div>
-                    <button type="button" id="add-clo-form" class="btn btn-success btn-sm mt-2"><i class="fas fa-plus"></i> Thêm CLO</button>
-                </div>
-
-                <!-- Tab Nội dung chi tiết -->
-                <div class="tab-pane fade" id="tab-noidung" role="tabpanel" aria-labelledby="tab-noidung-tab">
-                    {{ noi_dung_formset.management_form }}
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-sm">
-                            <thead>
-                                <tr>
-                                    <th style="width: 15%;">Tuần/Chủ đề</th>
-                                    <th style="width: 30%;">Nội dung giảng dạy</th>
-                                    <th style="width: 5%;">Giờ LT</th>
-                                    <th style="width: 5%;">Giờ TH</th>
-                                    <th style="width: 5%;">Giờ Tự học</th>
-                                    <th style="width: 35%;">CĐR liên quan</th>
-                                    <th style="width: 5%;">Xóa</th>
-                                </tr>
-                            </thead>
-                            <tbody id="noidung-formset">
-                                {% for form in noi_dung_formset %}
-                                    <tr class="noidung-form">
-                                        {{ form.id }}
-                                        <td>{{ form.tuan_hoc_hoac_chu_de|as_crispy_field }}</td>
-                                        <td>{{ form.noi_dung_giang_day|as_crispy_field }}</td>
-                                        <td>{{ form.so_gio_ly_thuyet|as_crispy_field }}</td>
-                                        <td>{{ form.so_gio_thuc_hanh|as_crispy_field }}</td>
-                                        <td>{{ form.so_gio_tu_hoc|as_crispy_field }}</td>
-                                        <td>{{ form.chuan_dau_ra_lien_quan|as_crispy_field }}</td>
-                                        <td>{% if form.instance.pk %}{{ form.DELETE|as_crispy_field }}{% endif %}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <template id="empty-noidung-form-template">
-                        <tr class="noidung-form">
-                            {{ noi_dung_formset.empty_form.id }}
-                            <td>{{ noi_dung_formset.empty_form.tuan_hoc_hoac_chu_de }}</td>
-                            <td>{{ noi_dung_formset.empty_form.noi_dung_giang_day }}</td>
-                            <td>{{ noi_dung_formset.empty_form.so_gio_ly_thuyet }}</td>
-                            <td>{{ noi_dung_formset.empty_form.so_gio_thuc_hanh }}</td>
-                            <td>{{ noi_dung_formset.empty_form.so_gio_tu_hoc }}</td>
-                            <td>{{ noi_dung_formset.empty_form.chuan_dau_ra_lien_quan }}</td>
-                            <td>{{ noi_dung_formset.empty_form.DELETE }}</td>
-                        </tr>
-                    </template>
-                    <button type="button" id="add-noidung-form" class="btn btn-info btn-sm mt-2"><i class="fas fa-plus"></i> Thêm nội dung</button>
-                </div>
-
-                <!-- Tab Đánh giá -->
-                <div class="tab-pane fade" id="tab-danhgia" role="tabpanel" aria-labelledby="tab-danhgia-tab">
-                    {{ danh_gia_formset.management_form }}
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-sm">
-                            <thead>
-                                <tr>
-                                    <th style="width: 15%;">Loại</th>
-                                    <th style="width: 25%;">Tên hình thức</th>
-                                    <th style="width: 10%;">Tỷ lệ (%)</th>
-                                    <th style="width: 45%;">CĐR được đánh giá</th>
-                                    <th style="width: 5%;">Xóa</th>
-                                </tr>
-                            </thead>
-                            <tbody id="danhgia-formset">
-                                {% for form in danh_gia_formset %}
-                                    <tr class="danhgia-form">
-                                        {{ form.id }}
-                                        <td>{{ form.loai_danh_gia|as_crispy_field }}</td>
-                                        <td>{{ form.ten_hinh_thuc|as_crispy_field }}</td>
-                                        <td>{{ form.ty_le_diem|as_crispy_field }}</td>
-                                        <td>{{ form.chuan_dau_ra_danh_gia|as_crispy_field }}</td>
-                                        <td>{% if form.instance.pk %}{{ form.DELETE|as_crispy_field }}{% endif %}</td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    <template id="empty-danhgia-form-template">
-                        <tr class="danhgia-form">
-                            {{ danh_gia_formset.empty_form.id }}
-                            <td>{{ danh_gia_formset.empty_form.loai_danh_gia }}</td>
-                            <td>{{ danh_gia_formset.empty_form.ten_hinh_thuc }}</td>
-                            <td>{{ danh_gia_formset.empty_form.ty_le_diem }}</td>
-                            <td>{{ danh_gia_formset.empty_form.chuan_dau_ra_danh_gia }}</td>
-                            <td>{{ danh_gia_formset.empty_form.DELETE }}</td>
-                        </tr>
-                    </template>
-                    <button type="button" id="add-danhgia-form" class="btn btn-warning btn-sm mt-2"><i class="fas fa-plus"></i> Thêm hình thức</button>
-                </div>
+                </form>
             </div>
         </div>
-        <div class="card-footer">
-            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Lưu Thay Đổi</button>
-            <a href="{% url 'daotao:danh_sach_de_cuong' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-secondary">Hủy</a>
-        </div>
     </div>
-</form>
-{% endblock %}
-
-{% block scripts %}
-{{ block.super }}
-<!-- Summernote -->
-<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-bs4.min.js"></script>
-<script>
-$(document).ready(function() {
-    $('.summernote').summernote({
-        height: 200,
-        toolbar: [
-            ['style', ['style']],
-            ['font', ['bold', 'italic', 'underline', 'clear']],
-            ['fontname', ['fontname']],
-            ['color', ['color']],
-            ['para', ['ul', 'ol', 'paragraph']],
-            ['height', ['height']],
-            ['table', ['table']],
-            ['insert', ['link', 'picture', 'video']],
-            ['view', ['fullscreen', 'codeview', 'help']]
-        ]
-    });
-});
-</script>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    function setupFormset(prefix, containerId, addButtonId, emptyTemplateId) {
-        const formsetContainer = document.querySelector(`#${containerId}`);
-        const addButton = document.querySelector(`#${addButtonId}`);
-        const totalFormsInput = document.querySelector(`input[name="${prefix}-TOTAL_FORMS"]`);
-        const emptyFormTemplate = document.querySelector(`#${emptyTemplateId}`).innerHTML;
-
-        if (!addButton) return;
-
-        addButton.addEventListener('click', function() {
-            let formsetCount = parseInt(totalFormsInput.value);
-            let newFormHtml = emptyFormTemplate.replace(/__prefix__/g, formsetCount);
-            
-            let tempDiv = document.createElement('div');
-            if (formsetContainer.tagName === 'TBODY') {
-                tempDiv.innerHTML = '<table><tbody>' + newFormHtml + '</tbody></table>';
-                let newFormElement = tempDiv.querySelector('tr');
-                formsetContainer.appendChild(newFormElement);
-                $(newFormElement).find('.select2').select2({
-                    width: '100%'
-                });
-            } else {
-                tempDiv.innerHTML = newFormHtml;
-                let newFormElement = tempDiv.firstElementChild;
-                formsetContainer.appendChild(newFormElement);
-            }
-            
-            totalFormsInput.value = formsetCount + 1;
-        });
-    }
-
-    setupFormset('clo', 'clo-formset', 'add-clo-form', 'empty-clo-form-template');
-    setupFormset('noidung', 'noidung-formset', 'add-noidung-form', 'empty-noidung-form-template');
-    setupFormset('danhgia', 'danhgia-formset', 'add-danhgia-form', 'empty-danhgia-form-template');
-    
-    $('.select2').select2({
-        width: '100%'
-    });
-});
-</script>
+</div>
 {% endblock %}

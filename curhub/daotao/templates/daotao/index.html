@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Trang chủ - Hệ thống Quản lý Đào tạo{% endblock %}
+
+{% block page_title %}
+Hệ thống Quản lý Chương trình Đào tạo
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Chức năng chính</h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for item in menu_items %}
+                        <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                            <a href="{% if item.url %}{% url item.url %}{% else %}#{% endif %}" class="btn btn-app" style="width: 100%; height: 120px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 1px solid #ddd; border-radius: 5px; text-align: center; padding: 15px;">
+                                <i class="{{ item.icon }} fa-2x mb-2"></i>
+                                <span style="font-size: 1rem; white-space: normal;">{{ item.name }}</span>
+                            </a>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <p>Không có chức năng nào được tìm thấy.</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

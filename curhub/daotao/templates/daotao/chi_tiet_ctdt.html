@@ -576,6 +576,12 @@ $(document).ready(function() {
         var url = "{% url 'daotao:update_chi_tiet_hoc_phan_inline' %}";
         var csrfToken = "{{ csrf_token }}";
 
+        if (!pk || field === undefined) {
+            toastr.error('Lỗi: Thiếu PK hoặc thuộc tính field. Không thể lưu.');
+            switchToViewMode($td);
+            return;
+        }
+
         $.ajax({
             url: url,
             type: 'POST',

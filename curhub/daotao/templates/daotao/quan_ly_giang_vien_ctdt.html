@@ -85,10 +85,11 @@ $(document).ready(function() {
     });
     
     // Handle add/remove lecturer actions
-    $('#giangvien-list-container').on('click', '.btn-toggle-gv', function() {
+    // Handle add/remove lecturer actions from the dynamic content
+    $(document).on('click', '.btn-add-gv, .btn-remove-gv', function() {
         var button = $(this);
         var gvPk = button.data('gv-pk');
-        var action = button.data('action');
+        var action = button.hasClass('btn-add-gv') ? 'add' : 'remove';
         var url = "{% url 'daotao:cap_nhat_giang_vien_ctdt' ctdt.pk %}";
         var csrfToken = "{{ csrf_token }}";
 
@@ -104,26 +105,21 @@ $(document).ready(function() {
             success: function(data) {
                 if (data.status === 'success') {
                     toastr.success(data.message);
-                    var row = $('#gv-row-' + gvPk);
-                    var statusCell = row.find('td:nth-child(4)');
-                    
                     if (action === 'add') {
-                        button.removeClass('btn-primary').addClass('btn-danger');
-                        button.data('action', 'remove');
-                        button.html('<i class="fas fa-trash-alt"></i> Xóa khỏi CTĐT');
-                        statusCell.html('<span class="badge badge-success">Đã thêm</span>');
-                    } else {
-                        button.removeClass('btn-danger').addClass('btn-primary');
-                        button.data('action', 'add');
-                        button.html('<i class="fas fa-plus"></i> Thêm vào CTĐT');
-                        statusCell.html('<span class="badge badge-secondary">Chưa thêm</span>');
+                        // Remove from available list and add to assigned list
+                        $('#giang-vien-chua-tham-gia-' + gvPk).remove();
+                        $('#assigned-lecturers').append(data.lecturer_html);
+                    } else { // remove action
+                        // Remove from assigned list and add to available list
+                        $('#giang-vien-' + gvPk).remove();
+                        $('#available-lecturers').append(data.lecturer_html);
                     }
                 } else {
                     toastr.error(data.message || 'Có lỗi xảy ra.');
                 }
             },
-            error: function() {
-                toastr.error('Lỗi kết nối. Vui lòng thử lại.');
+            error: function(xhr, status, error) {
+                toastr.error('Lỗi kết nối: ' + error);
             }
         });
     });

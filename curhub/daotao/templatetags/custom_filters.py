@@ -16,3 +16,14 @@ def sum_attribute(value, arg):
         return sum(getattr(obj, arg) for obj in value)
     except (AttributeError, TypeError):
         return 0
+
+@register.filter(name='trang_thai_to_badge')
+def trang_thai_to_badge(trang_thai):
+    if trang_thai == 'Đã có kế hoạch':
+        return 'badge-success'
+    elif trang_thai == 'Chưa có kế hoạch':
+        return 'badge-warning'
+    elif trang_thai == 'Không còn áp dụng':
+        return 'badge-danger'
+    else:
+        return 'badge-secondary'

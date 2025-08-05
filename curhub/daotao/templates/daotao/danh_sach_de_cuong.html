@@ -1,53 +1,63 @@
 {% extends "base.html" %}
+{% load static %}
+
 {% block content %}
-<div class="card">
-    <div class="card-header">
-        <h3 class="card-title">{{ page_title }}</h3>
-        <div class="card-tools">
-            <a href="{% url 'daotao:them_de_cuong' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-primary">
-                <i class="fas fa-plus"></i> Thêm phiên bản mới
+<div class="container-fluid">
+    <div class="card card-primary card-outline">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-file-alt mr-1"></i>
+                Đề cương cho học phần: <strong>{{ hoc_phan.ten_hoc_phan }} ({{ hoc_phan.ma_hoc_phan }})</strong>
+            </h3>
+            <div class="card-tools">
+                <a href="{% url 'daotao:them_de_cuong' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Thêm Đề cương mới
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if de_cuong_list %}
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Tên/Phiên bản Đề cương</th>
+                            <th>Ngày ban hành</th>
+                            <th>Trạng thái</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for dc in de_cuong_list %}
+                        <tr>
+                            <td>{{ dc.ten_de_cuong_phien_ban }}</td>
+                            <td>{{ dc.ngay_ban_hanh|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if dc.la_phien_ban_hien_hanh %}
+                                    <span class="badge badge-success">Hiện hành</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Cũ</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-primary">Xem chi tiết</a>
+                                <a href="{% url 'daotao:sua_de_cuong' dc.pk %}" class="btn btn-sm btn-info">Sửa</a>
+                                <a href="{% url 'daotao:xoa_de_cuong' dc.pk %}" class="btn btn-sm btn-danger">Xóa</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="alert alert-info">
+                    <p>Chưa có đề cương nào cho học phần này.</p>
+                </div>
+            {% endif %}
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'daotao:chi_tiet_hoc_phan' hoc_phan.pk %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Quay lại chi tiết học phần
             </a>
         </div>
-    </div>
-    <div class="card-body">
-        <table class="table table-bordered table-striped">
-            <thead>
-                <tr>
-                    <th>Tên/Ghi chú phiên bản</th>
-                    <th>Số hiệu</th>
-                    <th>Ngày ban hành</th>
-                    <th>Là phiên bản hiện hành?</th>
-                    <th>Hành động</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for de_cuong in de_cuong_list %}
-                <tr>
-                    <td>{{ de_cuong.ten_de_cuong_phien_ban }}</td>
-                    <td>{{ de_cuong.so_phien_ban|default_if_none:"" }}</td>
-                    <td>{{ de_cuong.ngay_ban_hanh|date:"d/m/Y" }}</td>
-                    <td>
-                        {% if de_cuong.la_phien_ban_hien_hanh %}
-                            <span class="badge badge-success">Có</span>
-                        {% else %}
-                            <span class="badge badge-secondary">Không</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <a href="{% url 'daotao:sua_de_cuong' pk_de_cuong=de_cuong.pk %}" class="btn btn-sm btn-info">Sửa</a>
-                        <a href="{% url 'daotao:xoa_de_cuong' pk_de_cuong=de_cuong.pk %}" class="btn btn-sm btn-danger">Xóa</a>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="5" class="text-center">Chưa có phiên bản đề cương nào cho học phần này.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-    <div class="card-footer">
-        <a href="{% url 'daotao:danh_sach_hoc_phan' %}" class="btn btn-secondary">Quay lại Danh sách Học phần</a>
     </div>
 </div>
 {% endblock %}
