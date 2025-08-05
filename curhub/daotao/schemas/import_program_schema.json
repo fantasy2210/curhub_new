@@ -1,0 +1,70 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TrainingProgramImport",
+  "type": "object",
+  "properties": {
+    "program_code": {
+      "type": "string",
+      "description": "Mã chương trình đào tạo (ví dụ: CTDL2025)"
+    },
+    "program_name": {
+      "type": "string",
+      "description": "Tên chương trình đào tạo"
+    },
+    "academic_year": {
+      "type": "string",
+      "description": "Năm học (ví dụ: 2025-2026)"
+    },
+    "semester": {
+      "type": "integer",
+      "description": "Học kỳ (1 hoặc 2)"
+    },
+    "courses": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "course_code": {
+            "type": "string",
+            "description": "Mã học phần"
+          },
+          "course_name": {
+            "type": "string",
+            "description": "Tên học phần"
+          },
+          "credits": {
+            "type": "integer",
+            "description": "Số tín chỉ"
+          },
+          "prerequisites": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Danh sách mã học phần tiên quyết (có thể rỗng)"
+          },
+          "theory_hours": {
+            "type": "integer",
+            "description": "Số tiết lý thuyết"
+          },
+          "practice_hours": {
+            "type": "integer",
+            "description": "Số tiết thực hành"
+          },
+          "self_study_hours": {
+            "type": "integer",
+            "description": "Số giờ tự học"
+          },
+          "evaluation": {
+            "type": "string",
+            "description": "Hình thức đánh giá (ví dụ: Thi, Kiểm tra thường xuyên)"
+          },
+          "description": {
+            "type": "string",
+            "description": "Mô tả ngắn gọn học phần"
+          }
+        },
+        "required": ["course_code", "course_name", "credits"]
+      }
+    }
+  },
+  "required": ["program_code", "program_name", "academic_year", "semester", "courses"]
+}

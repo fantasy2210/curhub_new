@@ -1,0 +1,158 @@
+{
+  "program_code": "7720101",
+  "program_name": "Bác sĩ Y khoa",
+  "academic_year": "2024",
+  "semester": 1,
+  "courses": [
+    {
+      "course_code": "TVU_YK01",
+      "course_name": "Triết học Mác – Lênin",
+      "credits": 3,
+      "prerequisites": [],
+      "theory_hours": 45,
+      "practice_hours": 0,
+      "self_study_hours": 105,
+      "evaluation": null,
+      "description": "Học phần giúp trang bị cho sinh viên những kiến thức cơ bản, cốt lõi của chủ nghĩa duy vật biện chứng và chủ nghĩa duy vật lịch sử, từ đó hình thành thế giới quan duy vật và phương pháp luận biện chứng làm nền tảng lý luận cho các môn học khác."
+    },
+    {
+      "course_code": "TVU_YK02",
+      "course_name": "Kinh tế chính trị Mác – Lênin",
+      "credits": 2,
+      "prerequisites": [
+        "TVU_YK01"
+      ],
+      "theory_hours": 30,
+      "practice_hours": 0,
+      "self_study_hours": 70,
+      "evaluation": null,
+      "description": "Trang bị các kiến thức cơ bản, cốt lõi của Kinh tế chính trị Mác - Lênin trong bối cảnh phát triển kinh tế của đất nước và thế giới, giúp sinh viên phân tích và đánh giá các quan hệ lợi ích kinh tế."
+    },
+    {
+      "course_code": "TVU_YK03",
+      "course_name": "Chủ nghĩa xã hội khoa học",
+      "credits": 2,
+      "prerequisites": [
+        "TVU_YK02"
+      ],
+      "theory_hours": 30,
+      "practice_hours": 0,
+      "self_study_hours": 70,
+      "evaluation": null,
+      "description": "Trang bị các kiến thức cơ bản về Chủ nghĩa xã hội khoa học, giúp sinh viên hiểu biết thực tiễn và vận dụng tri thức để xem xét các vấn đề chính trị - xã hội của đất nước."
+    },
+    {
+      "course_code": "TVU_YK04",
+      "course_name": "Tư tưởng Hồ Chí Minh",
+      "credits": 2,
+      "prerequisites": [],
+      "theory_hours": 30,
+      "practice_hours": 0,
+      "self_study_hours": 70,
+      "evaluation": null,
+      "description": "Trang bị kiến thức cơ bản về nguồn gốc, nội dung và giá trị của tư tưởng Hồ Chí Minh, rèn luyện kỹ năng phân tích, tổng hợp và vận dụng vào thực tiễn."
+    },
+    {
+      "course_code": "TVU_YK05",
+      "course_name": "Lịch sử Đảng Cộng sản Việt Nam",
+      "credits": 2,
+      "prerequisites": [
+        "TVU_YK04"
+      ],
+      "theory_hours": 30,
+      "practice_hours": 0,
+      "self_study_hours": 70,
+      "evaluation": null,
+      "description": "Trang bị kiến thức về sự ra đời và quá trình lãnh đạo của Đảng Cộng sản Việt Nam, hình thành thái độ tôn trọng thực tế khách quan và niềm tin vào sự lãnh đạo của Đảng."
+    },
+    {
+      "course_code": "TVU_YK06",
+      "course_name": "Pháp luật đại cương",
+      "credits": 2,
+      "prerequisites": [],
+      "theory_hours": 15,
+      "practice_hours": 30,
+      "self_study_hours": 55,
+      "evaluation": null,
+      "description": "Trang bị kiến thức cơ bản về Nhà nước và pháp luật, các quy định về tổ chức bộ máy nhà nước, quyền con người, và các lĩnh vực pháp luật cơ bản như dân sự, hôn nhân gia đình, lao động."
+    },
+    {
+      "course_code": "TVU_YK07",
+      "course_name": "Phương pháp nghiên cứu khoa học trong y học",
+      "credits": 2,
+      "prerequisites": [
+        "TVU_YK53"
+      ],
+      "theory_hours": 30,
+      "practice_hours": 0,
+      "self_study_hours": 70,
+      "evaluation": null,
+      "description": "Trang bị kiến thức cơ bản về phương pháp luận và cách thức tiến hành nghiên cứu khoa học, bao gồm cách tính cỡ mẫu, thu thập, phân tích dữ liệu và các vấn đề y đức trong nghiên cứu."
+    },
+    {
+      "course_code": "TVU_YK27",
+      "course_name": "Giải phẫu 1",
+      "credits": 3,
+      "prerequisites": [],
+      "theory_hours": 30,
+      "practice_hours": 30,
+      "self_study_hours": 90,
+      "evaluation": null,
+      "description": "Nghiên cứu về hình thái và cấu tạo của cơ thể, tập trung vào đại cương tứ chi, đầu mặt cổ và thần kinh trung ương. Học phần giúp xác định vị trí các cấu trúc trên mô hình và cơ thể người để hỗ trợ thăm khám."
+    },
+    {
+      "course_code": "TVU_YK28",
+      "course_name": "Giải phẫu 2",
+      "credits": 3,
+      "prerequisites": [
+        "TVU_YK27"
+      ],
+      "theory_hours": 30,
+      "practice_hours": 30,
+      "self_study_hours": 90,
+      "evaluation": null,
+      "description": "Nghiên cứu các cấu trúc giải phẫu ở vùng ngực bụng (tim, phổi, gan, dạ dày, thận), giúp sinh viên xác định các chi tiết giải phẫu quan trọng để tiếp cận quá trình thăm khám lâm sàng."
+    },
+    {
+      "course_code": "TVU_YK30",
+      "course_name": "Sinh lý 1",
+      "credits": 2,
+      "prerequisites": [
+        "TVU_YK19",
+        "TVU_YK18",
+        "TVU_YK27"
+      ],
+      "theory_hours": 15,
+      "practice_hours": 30,
+      "self_study_hours": 55,
+      "evaluation": null,
+      "description": "Giới thiệu kiến thức cơ bản về chức năng và điều hòa của các cơ quan, hệ thống trong cơ thể bình thường. Thực hiện và diễn giải một số kỹ thuật xét nghiệm chức năng đơn giản."
+    },
+    {
+      "course_code": "TVU_YK51",
+      "course_name": "Nội cơ sở 1",
+      "credits": 4,
+      "prerequisites": [
+        "TVU_YK28",
+        "TVU_YK31",
+        "TVU_YK32_HL"
+      ],
+      "theory_hours": 30,
+      "practice_hours": 120,
+      "self_study_hours": 70,
+      "evaluation": null,
+      "description": "Trang bị kỹ năng khám nội khoa toàn thân và các hệ cơ quan; các nguyên nhân, hội chứng, triệu chứng lâm sàng của các bệnh nội khoa thuộc chuyên khoa Tim mạch, tiêu hóa, thần kinh, thận niệu, cơ xương khớp."
+    },
+    {
+      "course_code": "TVU_YK96",
+      "course_name": "Thi tốt nghiệp",
+      "credits": 7,
+      "prerequisites": [],
+      "theory_hours": 60,
+      "practice_hours": 150,
+      "self_study_hours": 300,
+      "evaluation": "Thi trắc nghiệm, thi vấn đáp, làm bệnh án",
+      "description": "Đánh giá tổng hợp kiến thức và kỹ năng. Phần Cơ sở ngành: Giải phẫu - Sinh lý (Thi trắc nghiệm và vấn đáp). Phần Chuyên ngành: Lý thuyết tổng hợp Nội - Ngoại - Sản - Nhi (Thi trắc nghiệm) và Thực hành lâm sàng (Làm bệnh án và vấn đáp)."
+    }
+  ]
+}
