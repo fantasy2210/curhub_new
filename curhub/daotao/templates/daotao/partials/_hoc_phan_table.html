@@ -1,71 +1,57 @@
-{% load custom_filters %}
-
-<div class="table-responsive">
-    <table class="table table-bordered table-hover hoc-phan-table" id="hocPhanTable-{{ table_id }}">
-        <thead class="thead-light">
-            <tr>
-                <th rowspan="2" class="align-middle">TT</th>
-                <th rowspan="2" class="align-middle">Mã HP</th>
-                <th rowspan="2" class="align-middle">Tên học phần</th>
-                <th rowspan="2" class="align-middle">Tổng TC (Áp dụng)</th>
-                <th colspan="2" class="text-center">Tín chỉ (Áp dụng)</th>
-                <th rowspan="2" class="align-middle">Bắt buộc</th>
-                <th rowspan="2" class="align-middle">Ghi chú</th>
-                <th rowspan="2" class="align-middle" style="width: 12%;">Hành động</th>
-            </tr>
-            <tr>
-                <th class="text-center">Lý thuyết</th>
-                <th class="text-center">Thực hành</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for hp_ctdt in hoc_phan_list %}
-            <tr data-pk="{{ hp_ctdt.pk }}">
-                <td>{{ forloop.counter }}</td>
-                <td>{{ hp_ctdt.hoc_phan.ma_hoc_phan }}</td>
-                <td class="text-left">
-                    <a href="#" class="view-syllabus-btn" data-toggle="modal" data-target="#deCuongChiTietModal" data-hoc-phan-pk="{{ hp_ctdt.hoc_phan.pk }}">
-                        {{ hp_ctdt.hoc_phan.ten_hoc_phan }}
+<table class="table table-striped table-hover">
+    <thead>
+        <tr>
+            <th style="width: 5%;">#</th>
+            <th style="width: 10%;">Mã HP</th>
+            <th>Tên học phần</th>
+            <th style="width: 10%;">Số tín chỉ</th>
+            <th style="width: 10%;">Loại HP</th>
+            <th style="width: 10%;">Học kỳ</th>
+            <th style="width: 15%;">Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for hp_detail in hoc_phan_list %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ hp_detail.hoc_phan.ma_hoc_phan }}</td>
+            <td>
+                <a href="{% url 'daotao:chi_tiet_hoc_phan_trong_ctdt' pk_chi_tiet_hp=hp_detail.pk %}">
+                    {{ hp_detail.hoc_phan.ten_hoc_phan }}
+                </a>
+            </td>
+            <td>{{ hp_detail.tong_so_tin_chi_apdung }}</td>
+            <td>
+                {% if hp_detail.la_bat_buoc %}
+                    <span class="badge badge-success">Bắt buộc</span>
+                {% else %}
+                    <span class="badge badge-warning">Tự chọn</span>
+                {% endif %}
+            </td>
+            <td>{{ hp_detail.hoc_ky_du_kien|default:"N/A" }}</td>
+            <td>
+                {% if is_draft %}
+                <div class="btn-group">
+                    <a href="{% url 'daotao:sua_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp_detail.pk %}" 
+                       class="btn btn-sm btn-outline-warning" title="Chỉnh sửa chi tiết">
+                        <i class="fas fa-edit"></i>
                     </a>
-                </td>
-                <td class="font-weight-bold">{{ hp_ctdt.tong_so_tin_chi_apdung }}</td>
-                
-                <td class="editable text-center" data-name="tin_chi_ly_thuyet_apdung" data-type="number">{{ hp_ctdt.tin_chi_ly_thuyet_apdung|default_if_none:"-" }}</td>
-                <td class="editable text-center" data-name="tin_chi_thuc_hanh_apdung" data-type="number">{{ hp_ctdt.tin_chi_thuc_hanh_apdung|default_if_none:"-" }}</td>
-                
-                <td class="editable text-center" data-name="la_bat_buoc" data-type="select" data-value="{{ hp_ctdt.la_bat_buoc|yesno:'True,False' }}">
-                    {% if hp_ctdt.la_bat_buoc %}
-                        <span class="badge badge-success">Có</span>
-                    {% else %}
-                        <span class="badge badge-secondary">Không</span>
-                    {% endif %}
-                </td>
-
-                <td class="editable" data-name="ghi_chu_trong_ctdt" data-type="text">{{ hp_ctdt.ghi_chu_trong_ctdt|default:"" }}</td>
-                <td>
-                    {% if perms.daotao.view_chitiethocphantrongctdt %}
-                    <a href="{% url 'daotao:chi_tiet_hoc_phan_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-info btn-sm" title="Xem chi tiết"><i class="fas fa-eye"></i></a>
-                    {% endif %}
-                    {% if is_draft %}
-                        {% if perms.daotao.can_manage_program_structure %}
-                        <a href="{% url 'daotao:sua_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-warning btn-sm" title="Sửa chi tiết"><i class="fas fa-edit"></i></a>
-                        {% endif %}
-                        {% if perms.daotao.delete_chitiethocphantrongctdt %}
-                        <a href="{% url 'daotao:xoa_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp_ctdt.pk %}" class="btn btn-danger btn-sm" title="Xóa khỏi CTĐT"><i class="fas fa-trash"></i></a>
-                        {% endif %}
-                    {% endif %}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-        <tfoot>
-            <tr class="table-light font-weight-bold">
-                <td colspan="3" class="text-right">Tổng cộng</td>
-                <td>{{ hoc_phan_list|sum_attribute:'tong_so_tin_chi_apdung' }}</td>
-                <td class="text-center">{{ hoc_phan_list|sum_attribute:'tin_chi_ly_thuyet_apdung' }}</td>
-                <td class="text-center">{{ hoc_phan_list|sum_attribute:'tin_chi_thuc_hanh_apdung' }}</td>
-                <td colspan="3"></td>
-            </tr>
-        </tfoot>
-    </table>
-</div>
+                    <form action="{% url 'daotao:xoa_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp_detail.pk %}" method="POST" class="d-inline" onsubmit="return confirm('Bạn có chắc chắn muốn xóa học phần này khỏi chương trình?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger" title="Xóa khỏi CTĐT">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <span class="text-muted">N/A</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7" class="text-center text-muted">Không có học phần nào trong khối kiến thức này.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

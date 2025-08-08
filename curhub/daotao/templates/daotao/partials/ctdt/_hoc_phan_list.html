@@ -1,60 +1,52 @@
+{% load custom_filters %}
 <!-- Course List Section -->
-<div class="card">
-    <div class="card-header">
-        <h3 class="card-title">Danh sách học phần</h3>
-        {% if perms.daotao.add_chitiethocphantrongctdt %}
-        <div class="card-tools">
-            <a href="{% url 'daotao:them_hoc_phan_vao_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-primary btn-sm">
-                <i class="fas fa-plus mr-1"></i> Thêm học phần
-            </a>
-        </div>
-        {% endif %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h4 class="mb-0">Danh sách học phần</h4>
+    {% if perms.daotao.add_chitiethocphantrongctdt and is_draft %}
+    <div class="btn-group">
+        <a href="{% url 'daotao:them_hoc_phan_vao_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-primary btn-sm">
+            <i class="fas fa-plus mr-1"></i> Thêm lẻ
+        </a>
+        <a href="{% url 'daotao:them_hoc_phan_hang_loat' pk_ctdt=ctdt.pk %}" class="btn btn-success btn-sm">
+            <i class="fas fa-th-list mr-1"></i> Thêm hàng loạt
+        </a>
+        <a href="{% url 'daotao:upload_hoc_phan_ctdt' pk_ctdt=ctdt.pk %}" class="btn btn-info btn-sm">
+            <i class="fas fa-file-upload mr-1"></i> Tải lên từ file
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+{% for ten_khoi, details in hoc_phan_theo_khoi.items %}
+<div class="card mb-3">
+    <div class="card-header bg-light">
+        <h5 class="card-title mb-0">
+            <strong>{{ ten_khoi }}</strong>
+            <span class="badge badge-secondary font-weight-normal ml-2">{{ details.tong_tin_chi }} TC</span>
+        </h5>
     </div>
     <div class="card-body p-0">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th style="width: 10px">#</th>
-                    <th>Mã HP</th>
-                    <th>Tên học phần</th>
-                    <th>Số tín chỉ</th>
-                    <th>Loại HP</th>
-                    <th>Học kỳ</th>
-                    <th>Thao tác</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for hp in hoc_phan_list %}
-                <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>{{ hp.hoc_phan.ma_hoc_phan }}</td>
-                    <td>
-                        <a href="{% url 'daotao:chi_tiet_hoc_phan_trong_ctdt' pk_chi_tiet_hp=hp.pk %}">
-                            {{ hp.hoc_phan.ten_hoc_phan }}
-                        </a>
-                    </td>
-                    <td>{{ hp.hoc_phan.so_tin_chi }}</td>
-                    <td>{{ hp.hoc_phan.get_loai_hoc_phan_display }}</td>
-                    <td>{{ hp.hoc_ky }}</td>
-                    <td>
-                        <div class="btn-group">
-                            <a href="{% url 'daotao:sua_hoc_phan_ctdt' pk_chi_tiet_hp=hp.pk %}" 
-                               class="btn btn-sm btn-warning" title="Chỉnh sửa">
-                                <i class="fas fa-edit"></i>
-                            </a>
-                            <a href="{% url 'daotao:xoa_chi_tiet_hp_trong_ctdt' pk_chi_tiet_hp=hp.pk %}" 
-                               class="btn btn-sm btn-danger" title="Xóa">
-                                <i class="fas fa-trash"></i>
-                            </a>
-                        </div>
-                    </td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="7" class="text-center text-muted">Chưa có học phần nào trong chương trình này</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% include 'daotao/partials/_hoc_phan_table.html' with hoc_phan_list=details.hoc_phan_list is_draft=is_draft %}
     </div>
 </div>
+{% endfor %}
+
+{% if hoc_phan_chua_xep_khoi %}
+<div class="card mb-3">
+    <div class="card-header bg-warning">
+        <h5 class="card-title mb-0">
+            <strong>Chưa phân loại</strong>
+            <span class="badge badge-dark font-weight-normal ml-2">{{ hoc_phan_chua_xep_khoi|sum_credits }} TC</span>
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% include 'daotao/partials/_hoc_phan_table.html' with hoc_phan_list=hoc_phan_chua_xep_khoi is_draft=is_draft %}
+    </div>
+</div>
+{% endif %}
+
+{% if not hoc_phan_theo_khoi and not hoc_phan_chua_xep_khoi %}
+<div class="alert alert-info">
+    Chưa có học phần nào trong chương trình đào tạo này.
+</div>
+{% endif %}

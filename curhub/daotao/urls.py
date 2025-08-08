@@ -86,4 +86,8 @@ urlpatterns = [
     path('api/ctdt/<int:pk_ctdt>/get-assigned-giang-vien/', api_views.api_get_giang_vien_da_tham_gia, name='api_get_giang_vien_da_tham_gia'),
     path('api/ctdt/<int:pk_ctdt>/giang-vien/<int:pk_gv>/phan-cong-form/', api_views.api_get_phan_cong_form, name='api_get_phan_cong_form'),
     path('api/ctdt/<int:pk_ctdt>/luu-phan-cong/', api_views.api_luu_phan_cong, name='api_luu_phan_cong'),
+
+    # URL for LLM-based evaluation
+    path('api/cdr/danh-gia/', api_views.danh_gia_cdr_api, name='danh_gia_cdr_api'),
+    path('api/ollama-status/', api_views.get_ollama_status, name='get_ollama_status'),
 ]

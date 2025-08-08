@@ -173,6 +173,12 @@ def chi_tiet_ctdt(request, pk_ctdt):
                 "details": reverse('daotao:api_get_po_details', kwargs={'pk_po': 0}),
                 "delete": reverse('daotao:xoa_muc_tieu_dao_tao', kwargs={'pk_po': 0})
             },
+            "plo": {
+                "add": reverse('daotao:api_them_plo', kwargs={'pk_ctdt': chuong_trinh.pk}),
+                "edit": reverse('daotao:api_sua_plo', kwargs={'pk_cdr': 0}),
+                "details": reverse('daotao:api_get_plo_details', kwargs={'pk_cdr': 0}),
+                "delete": reverse('daotao:xoa_chuan_dau_ra', kwargs={'pk_cdr': 0})
+            }
         }
     }
 

@@ -27,3 +27,13 @@ def trang_thai_to_badge(trang_thai):
         return 'badge-danger'
     else:
         return 'badge-secondary'
+
+@register.filter(name='sum_credits')
+def sum_credits(hoc_phan_list):
+    """
+    Sums the 'tong_so_tin_chi_apdung' for a list of ChiTietHocPhanTrongCTDT objects.
+    """
+    total = 0
+    for hp in hoc_phan_list:
+        total += hp.tong_so_tin_chi_apdung or 0
+    return total

@@ -121,6 +121,17 @@
                         </div>
                     </div>
                 </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <div class="section-title">
+                           <h5><i class="fas fa-robot text-primary mr-2"></i>Trạng thái Ollama</h5>
+                           <button id="check-ollama-status-btn" class="btn btn-sm btn-outline-primary">Kiểm tra</button>
+                        </div>
+                        <div id="ollama-status-container" class="p-3 bg-light rounded">
+                            Chưa kiểm tra.
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- Modal for Rejection Reason -->
@@ -243,7 +254,7 @@
                                             {% endfor %}
                                             <td>
                                                 {% if perms.daotao.change_chuandaura and is_draft %}
-                                                <button class="btn btn-warning btn-sm btn-edit-plo" data-pk="{{ plo.pk }}">Sửa</button>
+                                                <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#ploModal" data-action="edit" data-pk="{{ plo.pk }}">Sửa</button>
                                                 {% endif %}
                                                 {% if perms.daotao.delete_chuandaura and is_draft %}
                                                 <button class="btn btn-danger btn-sm btn-delete-plo" data-pk="{{ plo.pk }}">Xóa</button>
@@ -462,9 +473,22 @@
                     {% for error in plo_form.dap_ung_muc_tieu.errors %}
                         <div class="invalid-feedback d-block">{{ error }}</div>
                     {% endfor %}
+
+                    <div id="evaluation-results-container-modal" class="mt-4" style="display: none;">
+                        <h6>Kết quả đánh giá từ LLM</h6>
+                        <div id="evaluation-spinner-modal" class="spinner-border spinner-border-sm text-primary" role="status" style="display: none;">
+                            <span class="visually-hidden">Đang tải...</span>
+                        </div>
+                        <div id="evaluation-results-modal" class="card">
+                            <div class="card-body p-2">
+                                <!-- Results will be injected here -->
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Hủy</button>
+                    <button type="button" id="evaluate-cdr-btn-modal" class="btn btn-info">Đánh giá CĐR</button>
                     <button type="submit" class="btn btn-primary">Lưu</button>
                 </div>
             </form>
@@ -514,6 +538,147 @@
 </script>
 
 <script src="{% static 'js/chi_tiet_ctdt.js' %}"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const evaluateBtn = document.getElementById('evaluate-cdr-btn-modal');
+    // The form fields are rendered directly from the plo_form object, so their IDs are standard Django form IDs.
+    const cdrTextArea = document.querySelector('#ploModal #id_noi_dung');
+    const resultsContainer = document.getElementById('evaluation-results-container-modal');
+    const resultsDiv = document.getElementById('evaluation-results-modal');
+    const spinner = document.getElementById('evaluation-spinner-modal');
+
+    if (evaluateBtn && cdrTextArea) {
+        evaluateBtn.addEventListener('click', function() {
+            const cdrText = cdrTextArea.value.trim();
+            if (!cdrText) {
+                toastr.warning('Vui lòng nhập nội dung Chuẩn Đầu Ra để đánh giá.');
+                return;
+            }
+
+            resultsContainer.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            spinner.style.display = 'block';
+
+            fetch("{% url 'daotao:danh_gia_cdr_api' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ cdr_text: cdrText })
+            })
+            .then(response => {
+                if (!response.ok) {
+                     return response.json().then(err => { throw new Error(err.error || `HTTP error! status: ${response.status}`) });
+                }
+                return response.json();
+            })
+            .then(data => {
+                spinner.style.display = 'none';
+                resultsDiv.style.display = 'block';
+                
+                if (data.error) {
+                    resultsDiv.innerHTML = `<div class="alert alert-danger p-2">${data.error}</div>`;
+                    return;
+                }
+
+                const getProp = (obj, path, defaultValue = 'N/A') => {
+                    const value = path.split('.').reduce((acc, part) => acc && acc[part], obj);
+                    return value !== undefined && value !== null ? value : defaultValue;
+                };
+
+                const phanTich = getProp(data, 'phan_tich_cau_truc', {});
+                const danhGia = getProp(data, 'danh_gia', {});
+                const deXuat = getProp(data, 'de_xuat_cai_thien', 'Không có đề xuất.');
+
+                const getBadgeClass = (value) => {
+                    if (value === 'Rất phù hợp' || value === 'Rất rõ ràng') return 'bg-success';
+                    if (value === 'Phù hợp' || value === 'Tương đối rõ ràng') return 'bg-warning text-dark';
+                    if (value === 'Không phù hợp' || value === 'Chung chung, cần cải thiện') return 'bg-danger';
+                    return 'bg-secondary';
+                };
+
+                const cdrCaiThien = getProp(data, 'cdr_cai_thien', '');
+
+                resultsDiv.innerHTML = `
+                    <div class="card-body p-3">
+                        <table class="table table-sm table-borderless">
+                            <tbody>
+                                <tr>
+                                    <td style="width: 150px;"><strong>Phân tích cấu trúc</strong></td>
+                                    <td>
+                                        <strong>Động từ:</strong> ${getProp(phanTich, 'dong_tu_hanh_dong')}<br>
+                                        <strong>Kiến thức:</strong> ${getProp(phanTich, 'doi_tuong_kien_thuc')}<br>
+                                        <strong>Bối cảnh:</strong> ${getProp(phanTich, 'boi_canh_muc_dich')}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Đánh giá</strong></td>
+                                    <td>
+                                        Mức độ phù hợp: <span class="badge ${getBadgeClass(getProp(danhGia, 'muc_do_phu_hop_dong_tu'))}">${getProp(danhGia, 'muc_do_phu_hop_dong_tu')}</span><br>
+                                        Tính rõ ràng: <span class="badge ${getBadgeClass(getProp(danhGia, 'tinh_ro_rang_CDR'))}">${getProp(danhGia, 'tinh_ro_rang_CDR')}</span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Đề xuất cải thiện</strong></td>
+                                    <td>${deXuat}</td>
+                                </tr>
+                                ${cdrCaiThien ? `
+                                <tr>
+                                    <td><strong>Gợi ý chỉnh sửa</strong></td>
+                                    <td>
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <em class="text-muted">${cdrCaiThien}</em>
+                                            <button class="btn btn-outline-primary btn-sm ml-2 apply-suggestion-btn" style="white-space: nowrap;">Áp dụng</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                ` : ''}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+
+                // Add event listener for the new button
+                const applyBtn = resultsDiv.querySelector('.apply-suggestion-btn');
+                if (applyBtn) {
+                    applyBtn.addEventListener('click', function() {
+                        cdrTextArea.value = cdrCaiThien;
+                        toastr.success('Đã áp dụng gợi ý vào nội dung CĐR.');
+                    });
+                }
+            })
+            .catch(error => {
+                spinner.style.display = 'none';
+                resultsDiv.style.display = 'block';
+                resultsDiv.innerHTML = `<div class="alert alert-danger p-2"><strong>Lỗi:</strong> ${error.message}.</div>`;
+                console.error('Error:', error);
+            });
+        });
+    }
+});
+
+document.getElementById('check-ollama-status-btn').addEventListener('click', function() {
+    const statusContainer = document.getElementById('ollama-status-container');
+    statusContainer.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang kiểm tra...';
+
+    fetch("{% url 'daotao:get_ollama_status' %}")
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                let models = data.details.models.map(m => m.name).join(', ');
+                statusContainer.innerHTML = `<div class="alert alert-success">Kết nối thành công. Các models có sẵn: ${models}</div>`;
+            } else {
+                statusContainer.innerHTML = `<div class="alert alert-danger">Lỗi kết nối: ${data.message}</div>`;
+            }
+        })
+        .catch(error => {
+            statusContainer.innerHTML = `<div class="alert alert-danger">Lỗi JavaScript: ${error.message}</div>`;
+        });
+});
+</script>
+
 <style>
     .flowchart-wrapper {
         overflow-x: auto;

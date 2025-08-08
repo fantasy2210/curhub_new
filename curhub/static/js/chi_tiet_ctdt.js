@@ -378,49 +378,48 @@ $(document).ready(function () {
     });
   });
 
-  // PLO Modal Logic
-  $("#ploModal").on("show.bs.modal", function (event) {
+  // PLO Modal Logic - handles both ADD and EDIT actions
+  $('#ploModal').on('show.bs.modal', function (event) {
     var button = $(event.relatedTarget);
-    var action = button ? button.data("action") : $(this).find("#ploForm").attr("data-action");
+    var action = button.data('action');
     var modal = $(this);
-    var form = modal.find("#ploForm");
-    form.attr("data-action", action || "add");
-    form[0].reset(); // Clear form fields
+    var form = modal.find('#ploForm');
+    
+    // Reset form and hide evaluation results for both actions initially
+    form[0].reset();
+    $('#evaluation-results-container-modal').hide();
+    form.find('input[name="dap_ung_muc_tieu"]').prop('checked', false);
 
-    if (action === "add") {
-      modal.find(".modal-title").text("Thêm mới Chuẩn Đầu ra");
-      form.attr("action", PAGE2.urls.plo.add);
-      form.attr("data-pk", ""); // Clear PK for add
-      // Ensure checkboxes for dap_ung_muc_tieu are unchecked
-      form.find('input[name="dap_ung_muc_tieu"]').prop("checked", false);
-    } else if (action === "edit") {
-      var pk = button ? button.data("pk") : form.attr("data-pk");
-      modal.find(".modal-title").text("Cập nhật Chuẩn Đầu ra");
-      form.attr("action", PAGE2.urls.plo.edit.replace("0", pk));
-      form.attr("data-pk", pk);
+    if (action === 'add') {
+        modal.find('.modal-title').text('Thêm mới Chuẩn Đầu ra');
+        form.attr('action', PAGE2.urls.plo.add);
+        form.removeAttr('data-pk');
+    } else if (action === 'edit') {
+        var pk = button.data('pk');
+        modal.find('.modal-title').text('Cập nhật Chuẩn Đầu ra');
+        form.attr('action', PAGE2.urls.plo.edit.replace('0', pk));
+        form.attr('data-pk', pk);
 
-      // Fetch PLO details and populate the form
-      $.ajax({
-        url: PAGE2.urls.plo.details.replace("0", pk),
-        type: "GET",
-        success: function (data) {
-          $("#id_ma_cdr").val(data.ma_cdr);
-          $("#id_noi_dung").val(data.noi_dung);
-          $("#id_loai_cdr").val(data.loai_cdr);
-          // Handle ManyToMany field (dap_ung_muc_tieu)
-          form.find('input[name="dap_ung_muc_tieu"]').prop("checked", false); // Uncheck all first
-          if (data.dap_ung_muc_tieu) {
-            data.dap_ung_muc_tieu.forEach(function (po_pk) {
-              form
-                .find(`input[name="dap_ung_muc_tieu"][value="${po_pk}"]`)
-                .prop("checked", true);
-            });
-          }
-        },
-        error: function () {
-          alert("Không thể tải dữ liệu Chuẩn Đầu ra.");
-        },
-      });
+        // Fetch PLO details and populate the form
+        $.ajax({
+            url: PAGE2.urls.plo.details.replace('0', pk),
+            type: 'GET',
+            success: function (data) {
+                form.find('#id_ma_cdr').val(data.ma_cdr);
+                form.find('#id_noi_dung').val(data.noi_dung);
+                form.find('#id_loai_cdr').val(data.loai_cdr);
+
+                if (data.dap_ung_muc_tieu) {
+                    data.dap_ung_muc_tieu.forEach(function (po_pk) {
+                        form.find('input[name="dap_ung_muc_tieu"][value="' + po_pk + '"]').prop('checked', true);
+                    });
+                }
+            },
+            error: function () {
+                alert('Không thể tải dữ liệu Chuẩn Đầu ra.');
+                modal.modal('hide'); // Hide modal on error
+            }
+        });
     }
   });
 
@@ -460,19 +459,6 @@ $(document).ready(function () {
     });
   });
 
-  // Edit PLO button click handler
-  $("#plo-sub-pane").on("click", ".btn-edit-plo", function () {
-    var pk = $(this).data("pk");
-    var modal = $("#ploModal");
-    var form = modal.find("#ploForm");
-
-    modal.find(".modal-title").text("Cập nhật Chuẩn Đầu ra");
-    form.attr("data-action", "edit");
-    form.attr("data-pk", pk);
-    // Manually trigger the show event logic
-    modal.trigger("show.bs.modal");
-    modal.modal("show");
-  });
 
   // Delete PO
   $("#poTable").on("click", ".btn-delete-po", function () {
