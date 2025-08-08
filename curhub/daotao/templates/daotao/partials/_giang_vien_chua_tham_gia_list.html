@@ -6,7 +6,7 @@
             <i class="fas fa-user-graduate mr-2"></i>
             {{ gv.ho_ten }} ({{ gv.ma_can_bo }})
         </div>
-        {% if is_draft %}
+        {% if 'daotao.change_chuongtrinhdaotao' in perms and is_draft %}
         <button class="btn btn-sm btn-success btn-add-gv" data-gv-pk="{{ gv.pk }}" data-gv-name="{{ gv.ho_ten }}">
             <i class="fas fa-user-plus"></i> Thêm
         </button>

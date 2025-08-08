@@ -1,0 +1,17 @@
+{% with gv=gv %}
+<div class="lecturer-card" id="available-lecturer-{{ gv.pk }}">
+    <div class="lecturer-info">
+        <div class="lecturer-details">
+            <h6 class="lecturer-name">{{ gv.ho_ten }}</h6>
+            <p class="lecturer-title">{{ gv.trinh_do_dao_tao|default:'N/A' }}</p>
+        </div>
+        <div class="lecturer-actions">
+            {% if 'daotao.change_chuongtrinhdaotao' in perms and is_draft %}
+            <button class="btn btn-sm btn-outline-success btn-add-gv" data-gv-pk="{{ gv.pk }}">
+                <i class="fas fa-plus"></i> Thêm
+            </button>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endwith %}

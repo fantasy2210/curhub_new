@@ -1,0 +1,82 @@
+.lecturer-card {
+    background-color: #fff;
+    border: 1px solid #e3e6f0;
+    border-radius: .35rem;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    transition: box-shadow .15s ease-in-out;
+}
+
+.lecturer-card:hover {
+    box-shadow: 0 .15rem 1.75rem 0 rgba(58,59,69,.15);
+}
+
+.lecturer-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.lecturer-name {
+    font-weight: 700;
+    color: #4e73df;
+    margin-bottom: .25rem;
+}
+
+.lecturer-title {
+    font-size: .85rem;
+    color: #858796;
+    margin-bottom: .5rem;
+}
+
+.lecturer-contact span {
+    display: block;
+    font-size: .8rem;
+    color: #858796;
+    margin-bottom: .25rem;
+}
+
+.lecturer-contact span i {
+    margin-right: .5rem;
+    color: #b7b9cc;
+}
+
+.lecturer-actions .btn {
+    margin-left: .5rem;
+}
+
+.assigned-courses {
+    border-top: 1px solid #e3e6f0;
+    padding-top: 1rem;
+}
+
+.assigned-courses ul {
+    padding-left: 0;
+    margin-bottom: 0;
+}
+
+.assigned-courses li {
+    display: flex;
+    align-items: center;
+    padding: .5rem;
+    border-radius: .25rem;
+    margin-bottom: .5rem;
+    background-color: #f8f9fc;
+}
+
+.assigned-courses li i {
+    margin-right: .75rem;
+}
+
+.assigned-courses .badge-light-blue {
+    background-color: #e7f1ff;
+    color: #4e73df;
+    font-weight: 500;
+    margin-left: auto;
+}
+
+.no-assignment {
+    padding: 1rem 0;
+    margin-bottom: 0;
+}

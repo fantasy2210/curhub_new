@@ -1,0 +1,36 @@
+﻿Mã UC,Tên Use Case,Mô tả ngắn,Ưu tiên,Tình trạng hiện tại,Công việc cần làm
+UC-01a,Tạo mới CTĐT,"Tạo mới CTĐT, kiểm tra hợp lệ, sinh mã",P1,"Đã có model, view, form, URL",Kiểm thử toàn bộ luồng; bổ sung validate nâng cao và log thao tác
+UC-01b,Cập nhật CTĐT,Cập nhật thông tin & tạo phiên bản mới,P1,Đã có; chưa thấy UI so sánh phiên bản khi update,Hoàn thiện tính năng so sánh; thêm cảnh báo khi thay đổi lớn
+UC-02,Quản lý CĐR,"Xây dựng, khảo sát, phê duyệt CĐR",P1,"Có model PLO, CLO; chưa có khảo sát/phê duyệt",Phát triển module khảo sát; thêm quy trình phê duyệt CĐR
+UC-03,Quản lý học phần,"CRUD học phần, cập nhật cấu trúc & tín chỉ",P1,Đã có đầy đủ,"Rà soát nghiệp vụ, đồng bộ với CTĐT"
+UC-04,Quản lý đề cương học phần,"Tạo, cập nhật, phê duyệt, quản lý phiên bản đề cương",P1,Có model DeCuongHocPhan; phê duyệt chưa đủ bước,Thêm workflow phê duyệt; tracking phiên bản
+UC-05,Quản lý phiên bản CTĐT,"Tạo, so sánh, khôi phục phiên bản",P1,Có trường version; UI so sánh chưa hoàn thiện,Xây UI so sánh; log thay đổi; chức năng khôi phục phiên bản
+UC-06,Quản lý Hội đồng và Thẩm định,"Thành lập HĐ, họp, thẩm định CTĐT",P1,Chưa thấy trong code,"Xây toàn bộ module: model HĐ, luồng thành lập → họp → thẩm định"
+UC-07,Quản lý Minh chứng & Tài liệu,"Upload, phân loại, phân quyền",P1,Chưa có,"Thiết kế model file storage, phân loại, quyền truy cập; UI upload/download"
+UC-08,Quản lý Quy trình Phê duyệt,"Trình phê duyệt CTĐT, xử lý phản hồi, ban hành QĐ",P1,Mới có trường trạng thái phê duyệt,Xây chi tiết các bước duyệt; log phản hồi; ban hành quyết định
+UC-09,Quản lý Báo cáo & Thống kê,"Báo cáo tổng hợp, tiến độ mở ngành",P2,Chưa có module báo cáo tổng hợp,"Tạo báo cáo dashboard, xuất PDF/Excel, biểu đồ"
+UC-09/10,Quản lý Người dùng & Phân quyền,"Tài khoản, vai trò, quyền hạn, audit",P1,Django admin + User model,Tích hợp UI phân quyền chi tiết; audit log thao tác
+UC-11,Quản lý Cấu hình Hệ thống,"Tham số hệ thống, danh mục, templates",P2,Chưa thấy,"Tạo module cấu hình (timeout, file size, template văn bản)"
+UC-12,Quản lý Giao diện Người dùng,"Theme/layout, dashboard, menu",P3,Đang dùng Bootstrap mặc định,Xây dashboard tùy biến; theme theo brand
+UC-13,Quản lý Tích hợp Hệ thống,"API, SSO, đồng bộ dữ liệu, webhook",P2,Chưa có tích hợp SSO; API nội bộ hoạt động,"Thêm SSO (LDAP/AD), đồng bộ với hệ thống đào tạo; webhook sự kiện"
+UC-14,Quản lý Backup & Recovery,"Backup định kỳ, DR, khôi phục",P2,Chưa thấy cơ chế backup,Triển khai backup DB/file; giao diện quản lý
+UC-15,Quản lý Đối sánh CTĐT,So sánh CTĐT với chương trình khác,P2,Chưa có,"Xây công cụ đối sánh (so sánh cấu trúc, CĐR)"
+UC-16,Quản lý Khảo sát bên liên quan,"Khảo sát, phân tích phản hồi",P2,Chưa có,"Tích hợp khảo sát online, thống kê"
+UC-17,Quản lý Đánh giá CTĐT,"Đánh giá định kỳ, đột xuất",P1,Chưa có,"Xây form tiêu chí, thu thập dữ liệu, báo cáo"
+UC-18,Quản lý Điều kiện Mở ngành,"Theo dõi đội ngũ, CSVC, CTĐT, kinh phí",P1,Chưa có,"Module nhập liệu, cảnh báo thiếu"
+UC-19,Quản lý Kiểm định chất lượng,"Kế hoạch kiểm định, minh chứng",P2,Chưa có,"Xây quy trình kiểm định, upload minh chứng"
+UC-20,Quản lý Cải tiến CTĐT,"Kế hoạch cải tiến, giám sát",P2,Chưa có,"Tạo kế hoạch cải tiến, theo dõi tiến độ"
+UC-21,Quản lý Phân công giảng dạy,"Lập kế hoạch, phân công, theo dõi",P3,Chưa có,Module phân công + tracking
+UC-22,Quản lý Đánh giá học phần,Thu thập & phân tích dữ liệu,P2,Chưa có,"Form đánh giá, báo cáo học phần"
+UC-23,Quản lý Tài nguyên học tập/NCKH,"Quản lý học liệu số, nghiên cứu liên quan",P3,Chưa có,"Upload học liệu, phân quyền truy cập"
+UC-24,Quản lý Kế hoạch đào tạo,Rà soát KH đào tạo,P3,Chưa có,"Form nhập KH, xuất báo cáo"
+UC-26,Quản lý Nghị quyết phê duyệt chủ trương,Theo dõi nghị quyết,P2,Chưa có,"Module lưu trữ, tìm kiếm nghị quyết"
+UC-27,Quản lý Tờ trình đề xuất chủ trương,"Lập tờ trình, đính kèm minh chứng",P1,Chưa có,"Form tờ trình, upload file, gửi duyệt"
+UC-28,Quản lý Thẩm định chủ trương,"Tổ chức thẩm định, bỏ phiếu",P1,Chưa có,Module quy trình thẩm định chủ trương
+UC-30,Quản lý Ban chuyên môn,"Thành lập tổ đánh giá, phân công",P2,Chưa có,"Model Ban chuyên môn, phân công công việc"
+UC-31,Quản lý Đề án mở ngành,"Xây dựng đề án, minh chứng",P1,Chưa có,"Form đề án, quản lý version"
+UC-32,Quản lý Thẩm định cuối cùng,Thẩm định hồ sơ mở ngành,P1,Chưa có,"Module thẩm định cuối, lưu biên bản"
+UC-37,Quản lý kế hoạch triển khai CTĐT,"Kế hoạch chuyển đổi, theo dõi triển khai",P2,Chưa có,"Giao diện kế hoạch, tracking"
+UC-38,Quản lý tracking thay đổi,"Ghi nhận thay đổi, log người dùng",P2,Chưa có,"Module change-log, xuất lịch sử"
+UC-39,Quản lý workflow & nhắc việc,"Thiết lập quy trình, nhắc việc",P2,Chưa có,"Workflow engine, gửi thông báo"
+UC-40,Quản lý phối hợp đơn vị,"Phối hợp triển khai, xử lý vướng mắc",P3,Chưa có,"Module trao đổi, lưu lịch sử phối hợp"

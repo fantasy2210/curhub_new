@@ -51,10 +51,7 @@ def quan_ly_giang_vien_ctdt(request, pk_ctdt):
     # Annotate các giảng viên để biết ai đã ở trong CTĐT và ai chưa
     giang_vien_list = GiangVien.objects.annotate(
         is_in_ctdt=Exists(
-            PhanCongGiangDay.objects.filter(
-                giang_vien_id=OuterRef('pk'),
-                chi_tiet_hoc_phan__chuong_trinh_dao_tao_id=pk_ctdt
-            )
+            ctdt.giang_vien_tham_gia.filter(pk=OuterRef('pk'))
         )
     ).order_by('-is_in_ctdt', 'ten', 'ho')
 
@@ -100,54 +97,44 @@ def cap_nhat_giang_vien_ctdt(request, pk_ctdt):
         if not is_draft:
             return JsonResponse({'status': 'error', 'message': 'Chỉ có thể thêm giảng viên khi CTĐT ở trạng thái "Bản nháp".'}, status=403)
         
-        # Create a default teaching assignment for the lecturer to persist the assignment
-        # Assign to the first course in the program or create a placeholder if no courses exist
-        first_course = ChiTietHocPhanTrongCTDT.objects.filter(chuong_trinh_dao_tao=ctdt).first()
-        if first_course:
-            PhanCongGiangDay.objects.create(
-                giang_vien=giang_vien,
-                chi_tiet_hoc_phan=first_course,
-                vai_tro=PhanCongGiangDay.VAI_TRO_CHOICES[0][0]  # Default role, e.g., first choice
-            )
-        else:
-            # No courses in program, just create an assignment with null course (if allowed)
-            # Or skip assignment creation
-            pass
-
+        # Use the direct ManyToMany relationship to add the lecturer to the program
+        ctdt.giang_vien_tham_gia.add(giang_vien)
         message = f"Đã thêm giảng viên {giang_vien.ho_ten} vào chương trình đào tạo."
 
-        # Re-fetch the lecturer with updated assignments to render the list partial
-        giang_vien_updated = GiangVien.objects.prefetch_related(
-            models.Prefetch(
-                'cac_phan_cong',
-                queryset=PhanCongGiangDay.objects.filter(chi_tiet_hoc_phan__chuong_trinh_dao_tao=ctdt)
-                                                   .select_related('chi_tiet_hoc_phan__hoc_phan'),
-                to_attr='phan_cong_trong_ctdt'
-            )
-        ).get(pk=giang_vien_pk)
-
+        # The lecturer is now part of the program, but may not have specific assignments yet.
+        # We need to render the HTML for this lecturer in the "assigned" list.
+        # The context for the partial needs a lecturer object.
+        # The partial `_giang_vien_da_tham_gia_list.html` likely iterates over a list.
         context = {
-            'giang_vien_da_tham_gia': [giang_vien_updated],
+            'gv': giang_vien, # Pass the lecturer object directly in a list
             'ctdt': ctdt,
-            'is_draft': is_draft
+            'is_draft': is_draft,
+            'perms': request.user.get_all_permissions()
         }
-        lecturer_html = render_to_string('daotao/partials/_giang_vien_da_tham_gia_list.html', context, request=request)
+        lecturer_html = render_to_string('daotao/partials/_giang_vien_da_tham_gia_card.html', context, request=request)
 
     elif action == 'remove':
-        # This action will remove all assignments for this lecturer in this CTDT
+        if not is_draft:
+            return JsonResponse({'status': 'error', 'message': 'Chỉ có thể xóa giảng viên khi CTĐT ở trạng thái "Bản nháp".'}, status=403)
+
+        # Remove from the direct M2M relationship
+        ctdt.giang_vien_tham_gia.remove(giang_vien)
+        
+        # Also remove all teaching assignments for this lecturer in this CTDT for consistency
         PhanCongGiangDay.objects.filter(
             giang_vien=giang_vien,
             chi_tiet_hoc_phan__chuong_trinh_dao_tao=ctdt
         ).delete()
-        message = f"Đã xóa tất cả phân công của giảng viên {giang_vien.ho_ten} khỏi chương trình."
+        message = f"Đã xóa giảng viên {giang_vien.ho_ten} và các phân công liên quan khỏi chương trình."
         
         # Render the HTML for the newly available lecturer
         context = {
             'gv': giang_vien,
             'is_draft': is_draft,
-            'ctdt': ctdt
+            'ctdt': ctdt,
+            'perms': request.user.get_all_permissions()
         }
-        lecturer_html = render_to_string('daotao/partials/_giang_vien_chua_tham_gia_list.html', context, request=request)
+        lecturer_html = render_to_string('daotao/partials/_giang_vien_chua_tham_gia_card.html', context, request=request)
 
     else:
         return JsonResponse({'status': 'error', 'message': 'Hành động không hợp lệ.'}, status=400)

@@ -246,6 +246,13 @@ class ChuongTrinhDaoTao(models.Model):
         verbose_name="Các học phần trong chương trình"
     )
 
+    giang_vien_tham_gia = models.ManyToManyField(
+        'GiangVien',
+        related_name='chuong_trinh_tham_gia',
+        blank=True,
+        verbose_name="Giảng viên tham gia"
+    )
+
     def __str__(self):
         return f"{self.ten_nganh_ctdt} ({self.ma_nganh_ctdt}) - {self.get_trinh_do_dao_tao_display()}"
 

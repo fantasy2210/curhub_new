@@ -3,7 +3,8 @@ import re
 import ollama
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, Http404
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
+from django.template.loader import render_to_string
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.db.models import Q
@@ -482,10 +483,56 @@ def api_program_flowchart_data(request, pk_ctdt):
         return JsonResponse({'error': str(e)}, status=500)
 
 def api_search_giang_vien_chua_tham_gia(request, pk_ctdt):
-    return JsonResponse([], safe=False)
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    search_term = request.GET.get('q', '')
+
+    # Lấy danh sách ID của giảng viên đã tham gia
+    assigned_gv_ids = ctdt.giang_vien_tham_gia.values_list('id', flat=True)
+    
+    # Lấy danh sách giảng viên chưa tham gia
+    giang_vien_list = GiangVien.objects.exclude(id__in=assigned_gv_ids)
+
+    if search_term:
+        giang_vien_list = giang_vien_list.filter(
+            Q(ho_ten__icontains=search_term) | 
+            Q(ma_can_bo__icontains=search_term)
+        )
+    
+    html = render_to_string(
+        'daotao/partials/_giang_vien_chua_tham_gia_list.html',
+        {
+            'giang_vien_chua_tham_gia': giang_vien_list,
+            'ctdt': ctdt,
+            'is_draft': ctdt.trang_thai == 'DRAFT',
+            'perms': request.user.get_all_permissions()
+        }
+    )
+    return JsonResponse({'html': html})
+
 
 def api_get_giang_vien_da_tham_gia(request, pk_ctdt):
-    return JsonResponse([], safe=False)
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    search_term = request.GET.get('q', '')
+
+    # Lấy danh sách giảng viên đã tham gia
+    giang_vien_list = ctdt.giang_vien_tham_gia.all()
+
+    if search_term:
+        giang_vien_list = giang_vien_list.filter(
+            Q(ho_ten__icontains=search_term) | 
+            Q(ma_can_bo__icontains=search_term)
+        )
+
+    html = render_to_string(
+        'daotao/partials/_giang_vien_da_tham_gia_list.html',
+        {
+            'giang_vien_da_tham_gia': giang_vien_list,
+            'ctdt': ctdt,
+            'is_draft': ctdt.trang_thai == 'DRAFT',
+            'perms': request.user.get_all_permissions()
+        }
+    )
+    return JsonResponse({'html': html})
 
 def api_get_phan_cong_form(request, pk_ctdt, pk_gv):
     return JsonResponse({})

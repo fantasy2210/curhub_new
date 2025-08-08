@@ -1,4 +1,4 @@
-{% for gv in giang_vien_da_tham_gia %}
+{% with gv=gv %}
 <div class="lecturer-card" id="assigned-lecturer-{{ gv.pk }}">
     <div class="lecturer-info">
         <div class="lecturer-details">
@@ -36,8 +36,4 @@
         {% endif %}
     </div>
 </div>
-{% empty %}
-<div class="text-center p-3 text-muted">
-    Chưa có giảng viên nào được thêm vào chương trình.
-</div>
-{% endfor %}
+{% endwith %}

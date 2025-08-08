@@ -246,6 +246,7 @@ def chi_tiet_ctdt(request, pk_ctdt):
     context = {
         'ctdt': chuong_trinh,
         'page_title': f"Chi tiết CTĐT: {chuong_trinh.ten_nganh_ctdt}",
+        'perms': request.user.get_all_permissions(),
         'hoc_phan_theo_khoi': hoc_phan_theo_khoi,
         'hoc_phan_chua_xep_khoi': hoc_phan_chua_xep_khoi,
         'tong_tin_chi_toan_ctdt': tong_tin_chi_toan_ctdt,

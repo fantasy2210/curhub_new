@@ -542,8 +542,10 @@ $(document).ready(function () {
     $("#available-lecturers").html(
       '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải...</p>'
     );
-    $.get(url, function (data) {
-      $("#available-lecturers").html(data);
+    $.get(url, function (response) {
+      if (response.html) {
+        $("#available-lecturers").html(response.html);
+      }
     }).fail(function (jqXHR) {
       const snippet = (jqXHR.responseText || "").slice(0, 200);
       $("#available-lecturers").html(
@@ -561,8 +563,10 @@ $(document).ready(function () {
     $("#assigned-lecturers").html(
       '<p class="text-center"><i class="fas fa-spinner fa-spin"></i> Đang tải...</p>'
     );
-    $.get(url, function (data) {
-      $("#assigned-lecturers").html(data);
+    $.get(url, function (response) {
+      if (response.html) {
+        $("#assigned-lecturers").html(response.html);
+      }
     }).fail(function (jqXHR) {
       const snippet = (jqXHR.responseText || "").slice(0, 200);
       $("#assigned-lecturers").html(
@@ -620,20 +624,24 @@ $(document).ready(function () {
         },
         dataType: "json",
         success: function (response) {
-          if (response.status === "success") {
-            toastr.success(response.message);
-            if (action === "add") {
-              button.closest('.list-group-item').remove();
-              $("#assigned-lecturers").append(response.lecturer_html);
-            } else { // action === "remove"
-              // Remove from assigned list by traversing from the button
-              button.closest('.list-group-item').remove();
-              // Add to available list
-              $("#available-lecturers").append(response.lecturer_html);
+            if (response.status === "success") {
+                toastr.success(response.message);
+                const lecturerItem = button.closest('.lecturer-card');
+                
+                if (action === "add") {
+                    // Remove from available list and append to assigned list
+                    lecturerItem.remove();
+                    $("#assigned-lecturers").append(response.lecturer_html);
+                } else { // action === "remove"
+                    // Remove from assigned list and append to available list
+                    lecturerItem.remove();
+                    // The response.lecturer_html should contain the markup for the lecturer
+                    // to be added back to the "available" list.
+                    $("#available-lecturers").append(response.lecturer_html);
+                }
+            } else {
+                toastr.error("Lỗi: " + response.message);
             }
-          } else {
-            toastr.error("Lỗi: " + response.message);
-          }
         },
         error: function () {
           toastr.error("Đã có lỗi xảy ra khi thực hiện thao tác.");
