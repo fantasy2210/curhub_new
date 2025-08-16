@@ -42,6 +42,12 @@ def get_menu_items(user):
             'icon': 'fas fa-chalkboard-teacher',
             'required_perm': 'daotao.view_giangvien',
         },
+        {
+            'name': 'Kho tài liệu',
+            'url': 'daotao:danh_sach_tai_lieu',
+            'icon': 'fas fa-archive',
+            'required_perm': 'daotao.view_tailieuhoctap',
+        },
     ]
 
     visible_menus = []

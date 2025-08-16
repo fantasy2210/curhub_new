@@ -1,0 +1,39 @@
+Đây là danh sách các công việc (to-do list) được lưu trong MCP:
+
+| ID | Tên công việc | Mô tả | Độ phức tạp | Trạng thái |
+| :--- | :--- | :--- | :--- | :--- |
+| `UC-01a` | Tạo mới CTĐT | Tạo mới CTĐT, kiểm tra hợp lệ, sinh mã. Công việc cần làm: Kiểm thử toàn bộ luồng; bổ sung validate nâng cao và log thao tác | 5 | ⬜️ Chưa hoàn thành |
+| `UC-01b` | Cập nhật CTĐT | Cập nhật thông tin & tạo phiên bản mới. Công việc cần làm: Hoàn thiện tính năng so sánh; thêm cảnh báo khi thay đổi lớn | 6 | ⬜️ Chưa hoàn thành |
+| `UC-02` | Quản lý CĐR | Xây dựng, khảo sát, phê duyệt CĐR. Công việc cần làm: Phát triển module khảo sát; thêm quy trình phê duyệt CĐR | 8 | ⬜️ Chưa hoàn thành |
+| `UC-03` | Quản lý học phần | CRUD học phần, cập nhật cấu trúc & tín chỉ. Công việc cần làm: Rà soát nghiệp vụ, đồng bộ với CTĐT | 3 | ✅ Hoàn thành |
+| `UC-04` | Quản lý đề cương học phần | Tạo, cập nhật, phê duyệt, quản lý phiên bản đề cương. Công việc cần làm: Thêm workflow phê duyệt; tracking phiên bản | 7 | ⬜️ Chưa hoàn thành |
+| `UC-05` | Quản lý phiên bản CTĐT | Tạo, so sánh, khôi phục phiên bản. Công việc cần làm: Xây UI so sánh; log thay đổi; chức năng khôi phục phiên bản | 8 | ⬜️ Chưa hoàn thành |
+| `UC-06` | Quản lý Hội đồng và Thẩm định | Thành lập HĐ, họp, thẩm định CTĐT. Công việc cần làm: Xây toàn bộ module: model HĐ, luồng thành lập → họp → thẩm định | 10 | ⬜️ Chưa hoàn thành |
+| `UC-07` | Quản lý Minh chứng & Tài liệu | Upload, phân loại, phân quyền. Công việc cần làm: Thiết kế model file storage, phân loại, quyền truy cập; UI upload/download | 9 | ⬜️ Chưa hoàn thành |
+| `UC-08` | Quản lý Quy trình Phê duyệt | Trình phê duyệt CTĐT, xử lý phản hồi, ban hành QĐ. Công việc cần làm: Xây chi tiết các bước duyệt; log phản hồi; ban hành quyết định | 9 | ⬜️ Chưa hoàn thành |
+| `UC-09` | Quản lý Báo cáo & Thống kê | Báo cáo tổng hợp, tiến độ mở ngành. Công việc cần làm: Tạo báo cáo dashboard, xuất PDF/Excel, biểu đồ | 7 | ⬜️ Chưa hoàn thành |
+| `UC-09/10` | Quản lý Người dùng & Phân quyền | Tài khoản, vai trò, quyền hạn, audit. Công việc cần làm: Tích hợp UI phân quyền chi tiết; audit log thao tác | 6 | ⬜️ Chưa hoàn thành |
+| `UC-11` | Quản lý Cấu hình Hệ thống | Tham số hệ thống, danh mục, templates. Công việc cần làm: Tạo module cấu hình (timeout, file size, template văn bản) | 5 | ⬜️ Chưa hoàn thành |
+| `UC-12` | Quản lý Giao diện Người dùng | Theme/layout, dashboard, menu. Công việc cần làm: Xây dashboard tùy biến; theme theo brand | 4 | ⬜️ Chưa hoàn thành |
+| `UC-13` | Quản lý Tích hợp Hệ thống | API, SSO, đồng bộ dữ liệu, webhook. Công việc cần làm: Thêm SSO (LDAP/AD), đồng bộ với hệ thống đào tạo; webhook sự kiện | 8 | ⬜️ Chưa hoàn thành |
+| `UC-14` | Quản lý Backup & Recovery | Backup định kỳ, DR, khôi phục. Công việc cần làm: Triển khai backup DB/file; giao diện quản lý | 7 | ⬜️ Chưa hoàn thành |
+| `UC-15` | Quản lý Đối sánh CTĐT | So sánh CTĐT với chương trình khác. Công việc cần làm: Xây công cụ đối sánh (so sánh cấu trúc, CĐR) | 8 | ⬜️ Chưa hoàn thành |
+| `UC-16` | Quản lý Khảo sát bên liên quan | Khảo sát, phân tích phản hồi. Công việc cần làm: Tích hợp khảo sát online, thống kê | 7 | ⬜️ Chưa hoàn thành |
+| `UC-17` | Quản lý Đánh giá CTĐT | Đánh giá định kỳ, đột xuất. Công việc cần làm: Xây form tiêu chí, thu thập dữ liệu, báo cáo | 8 | ⬜️ Chưa hoàn thành |
+| `UC-18` | Quản lý Điều kiện Mở ngành | Theo dõi đội ngũ, CSVC, CTĐT, kinh phí. Công việc cần làm: Module nhập liệu, cảnh báo thiếu | 9 | ⬜️ Chưa hoàn thành |
+| `UC-19` | Quản lý Kiểm định chất lượng | Kế hoạch kiểm định, minh chứng. Công việc cần làm: Xây quy trình kiểm định, upload minh chứng | 8 | ⬜️ Chưa hoàn thành |
+| `UC-20` | Quản lý Cải tiến CTĐT | Kế hoạch cải tiến, giám sát. Công việc cần làm: Tạo kế hoạch cải tiến, theo dõi tiến độ | 7 | ⬜️ Chưa hoàn thành |
+| `UC-21` | Quản lý Phân công giảng dạy | Lập kế hoạch, phân công, theo dõi. Công việc cần làm: Module phân công + tracking | 6 | ⬜️ Chưa hoàn thành |
+| `UC-22` | Quản lý Đánh giá học phần | Thu thập & phân tích dữ liệu. Công việc cần làm: Form đánh giá, báo cáo học phần | 7 | ⬜️ Chưa hoàn thành |
+| `UC-23` | Quản lý Tài nguyên học tập/NCKH | Quản lý học liệu số, nghiên cứu liên quan. Công việc cần làm: Upload học liệu, phân quyền truy cập | 6 | ⬜️ Chưa hoàn thành |
+| `UC-24` | Quản lý Kế hoạch đào tạo | Rà soát KH đào tạo. Công việc cần làm: Form nhập KH, xuất báo cáo | 5 | ⬜️ Chưa hoàn thành |
+| `UC-26` | Quản lý Nghị quyết phê duyệt chủ trương | Theo dõi nghị quyết. Công việc cần làm: Module lưu trữ, tìm kiếm nghị quyết | 6 | ⬜️ Chưa hoàn thành |
+| `UC-27` | Quản lý Tờ trình đề xuất chủ trương | Lập tờ trình, đính kèm minh chứng. Công việc cần làm: Form tờ trình, upload file, gửi duyệt | 8 | ⬜️ Chưa hoàn thành |
+| `UC-28` | Quản lý Thẩm định chủ trương | Tổ chức thẩm định, bỏ phiếu. Công việc cần làm: Module quy trình thẩm định chủ trương | 9 | ⬜️ Chưa hoàn thành |
+| `UC-30` | Quản lý Ban chuyên môn | Thành lập tổ đánh giá, phân công. Công việc cần làm: Model Ban chuyên môn, phân công công việc | 7 | ⬜️ Chưa hoàn thành |
+| `UC-31` | Quản lý Đề án mở ngành | Xây dựng đề án, minh chứng. Công việc cần làm: Form đề án, quản lý version | 9 | ⬜️ Chưa hoàn thành |
+| `UC-32` | Quản lý Thẩm định cuối cùng | Thẩm định hồ sơ mở ngành. Công việc cần làm: Module thẩm định cuối, lưu biên bản | 9 | ⬜️ Chưa hoàn thành |
+| `UC-37` | Quản lý kế hoạch triển khai CTĐT | Kế hoạch chuyển đổi, theo dõi triển khai. Công việc cần làm: Giao diện kế hoạch, tracking | 7 | ⬜️ Chưa hoàn thành |
+| `UC-38` | Quản lý tracking thay đổi | Ghi nhận thay đổi, log người dùng. Công việc cần làm: Module change-log, xuất lịch sử | 6 | ⬜️ Chưa hoàn thành |
+| `UC-39` | Quản lý workflow & nhắc việc | Thiết lập quy trình, nhắc việc. Công việc cần làm: Workflow engine, gửi thông báo | 8 | ⬜️ Chưa hoàn thành |
+| `UC-40` | Quản lý phối hợp đơn vị | Phối hợp triển khai, xử lý vướng mắc. Công việc cần làm: Module trao đổi, lưu lịch sử phối hợp | 5 | ⬜️ Chưa hoàn thành |

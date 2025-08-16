@@ -6,6 +6,7 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse
 from django.contrib import messages
 from django.db.models import Case, When, Value, IntegerField, Q, Count, Exists, OuterRef
+from django.db.models.functions import Cast, Substr
 from django.middleware.csrf import get_token
 import json
 from django.db import transaction
@@ -192,11 +193,15 @@ def chi_tiet_ctdt(request, pk_ctdt):
         default=Value(3),
         output_field=IntegerField(),
     )
+    
+    # Annotate with a numeric version of ma_cdr for natural sorting
+    # Extracts the number part from strings like 'PLO1', 'PLO10'
     chuan_dau_ra_ctdt = ChuanDauRa.objects.filter(
         chuong_trinh_dao_tao=chuong_trinh
     ).prefetch_related('dap_ung_muc_tieu').annotate(
-        custom_order=custom_order
-    ).order_by('custom_order', 'ma_cdr')
+        custom_order=custom_order,
+        ma_cdr_numeric=Cast(Substr('ma_cdr', 4), IntegerField())
+    ).order_by('custom_order', 'ma_cdr_numeric')
 
     # Group PLOs by type for the matrix display, maintaining the custom order
     plo_groups = {}

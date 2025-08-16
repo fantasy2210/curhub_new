@@ -179,7 +179,7 @@
                     <div class="tab-pane fade show active" id="po-sub-pane" role="tabpanel" aria-labelledby="po-sub-tab">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h5>Danh sách Mục tiêu Đào tạo (PO)</h5>
-                            {% if perms.daotao.add_muctieudaotao and is_draft %}
+                            {% if perms.daotao.can_manage_program_structure and is_draft %}
                             <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#poModal" data-action="add">
                                 <i class="fas fa-plus-circle mr-1"></i> Thêm mới Mục tiêu
                             </button>
@@ -201,10 +201,8 @@
                                         <td>{{ po.ma_muc_tieu }}</td>
                                         <td>{{ po.noi_dung }}</td>
                                         <td>
-                                            {% if perms.daotao.change_muctieudaotao and is_draft %}
+                                            {% if perms.daotao.can_manage_program_structure and is_draft %}
                                             <button class="btn btn-warning btn-sm btn-edit-po" data-pk="{{ po.pk }}">Sửa</button>
-                                            {% endif %}
-                                            {% if perms.daotao.delete_muctieudaotao and is_draft %}
                                             <button class="btn btn-danger btn-sm btn-delete-po" data-pk="{{ po.pk }}">Xóa</button>
                                             {% endif %}
                                         </td>
@@ -221,11 +219,9 @@
                     <div class="tab-pane fade" id="plo-sub-pane" role="tabpanel" aria-labelledby="plo-sub-tab">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h5>Danh sách chuẩn đầu ra (PLO)</h5>
-                             {% if perms.daotao.add_chuandaura and is_draft %}
                             <button type="button" class="btn btn-success btn-sm" data-toggle="modal" data-target="#ploModal" data-action="add">
                                 <i class="fas fa-plus-circle mr-1"></i> Thêm mới CĐR
                             </button>
-                            {% endif %}
                         </div>
                         <div class="table-responsive">
                             {% if plo_groups %}
@@ -255,12 +251,8 @@
                                             </td>
                                             {% endfor %}
                                             <td>
-                                                {% if perms.daotao.change_chuandaura and is_draft %}
                                                 <button class="btn btn-warning btn-sm" data-toggle="modal" data-target="#ploModal" data-action="edit" data-pk="{{ plo.pk }}">Sửa</button>
-                                                {% endif %}
-                                                {% if perms.daotao.delete_chuandaura and is_draft %}
                                                 <button class="btn btn-danger btn-sm btn-delete-plo" data-pk="{{ plo.pk }}">Xóa</button>
-                                                {% endif %}
                                             </td>
                                         </tr>
                                         {% endfor %}
@@ -807,6 +799,51 @@ $(document).ready(function() {
         } else if (e.key === 'Escape') {
             e.preventDefault();
             switchToViewMode($(this).closest('td'));
+        }
+    });
+
+    // Handle click on "Đánh giá" button in the PLO table
+    $('.btn-evaluate-plo').on('click', function() {
+        var ploText = $(this).data('text');
+        var modal = $('#ploModal');
+        
+        // Set modal title for evaluation
+        modal.find('.modal-title').text('Đánh giá Chuẩn Đầu Ra');
+        
+        // Set the text to be evaluated
+        modal.find('#id_noi_dung').val(ploText).prop('readonly', true); // Make it readonly
+        
+        // Hide fields not needed for evaluation
+        modal.find('#id_ma_cdr').closest('.form-group').hide();
+        modal.find('#id_loai_cdr').closest('.form-group').hide();
+        modal.find('h6:contains("Đáp ứng Mục tiêu")').hide();
+        modal.find('.checkbox-list-container').hide();
+        
+        // Adjust buttons for evaluation mode
+        modal.find('button[type="submit"]').hide(); // Hide the main "Save" button
+        modal.find('#evaluate-cdr-btn-modal').show(); // Ensure evaluation button is visible
+        
+        // Show the modal
+        modal.modal('show');
+    });
+
+    // Reset modal when opening for "add" or "edit"
+    $('#ploModal').on('show.bs.modal', function (event) {
+        var button = $(event.relatedTarget); // Button that triggered the modal
+        var action = button.data('action');
+
+        if (action === 'add' || action === 'edit') {
+            var modal = $(this);
+            // Reset title
+            modal.find('.modal-title').text('Chuẩn Đầu ra');
+            // Make sure all fields are visible and writable
+            modal.find('#id_noi_dung').prop('readonly', false);
+            modal.find('.form-group').show();
+            modal.find('h6:contains("Đáp ứng Mục tiêu")').show();
+            modal.find('.checkbox-list-container').show();
+            // Adjust buttons
+            modal.find('button[type="submit"]').show();
+            modal.find('#evaluate-cdr-btn-modal').show(); // Keep it visible for both
         }
     });
 });

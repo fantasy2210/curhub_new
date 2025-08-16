@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="card card-primary card-outline">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-book mr-1"></i>
+                {{ page_title }}
+            </h3>
+            <div class="card-tools">
+                <a href="{% url 'daotao:them_tai_lieu' %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> Thêm tài liệu mới
+                </a>
+            </div>
+        </div>
+        <div class="card-body">
+            <form method="get" class="mb-3">
+                <div class="input-group">
+                    <input type="text" name="q" class="form-control" placeholder="Tìm kiếm theo nhan đề, tác giả, tóm tắt, nhà xuất bản..." value="{{ query_search }}">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="submit">Tìm kiếm</button>
+                    </div>
+                </div>
+            </form>
+
+            {% if page_obj %}
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Nhan đề</th>
+                            <th>Tác giả</th>
+                            <th>Nhà XB</th>
+                            <th>Năm XB</th>
+                            <th>Loại</th>
+                            <th>Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for tl in page_obj %}
+                        <tr>
+                            <td>{{ tl.nhan_de }}</td>
+                            <td>{{ tl.tac_gia|default_if_none:"" }}</td>
+                            <td>{{ tl.nha_xuat_ban|default_if_none:"" }}</td>
+                            <td>{{ tl.nam_xuat_ban|default_if_none:"" }}</td>
+                            <td>{{ tl.get_loai_tai_lieu_display }}</td>
+                            <td>
+                                <a href="{% url 'daotao:sua_tai_lieu' tl.pk %}" class="btn btn-sm btn-info">Sửa</a>
+                                <a href="{% url 'daotao:xoa_tai_lieu' tl.pk %}" class="btn btn-sm btn-danger">Xóa</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+                {% include 'partials/_pagination.html' %}
+            {% else %}
+                <div class="alert alert-info">
+                    <p>Chưa có tài liệu nào trong thư viện.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

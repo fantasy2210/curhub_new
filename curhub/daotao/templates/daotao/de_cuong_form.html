@@ -1,44 +1,871 @@
 {% extends "base.html" %}
-{% load widget_tweaks %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/de_cuong_form.css' %}">
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-md-12">
-            <div class="card card-primary">
-                <div class="card-header">
-                    <h3 class="card-title">{{ page_title }}</h3>
+<div class="container-fluid de-cuong-form-container">
+    <!-- Progress indicator -->
+    <div class="progress-indicator">
+        <div class="progress-bar" style="width: 0%"></div>
+    </div>
+
+    <form method="post" id="decuong-form">
+        {% csrf_token %}
+        
+        <!-- 1. Thông tin học phần -->
+        <div class="card card-primary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    1. Thông tin chung
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
                 </div>
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="card-body">
-                        {% for field in form %}
-                            <div class="form-group">
-                                {{ field.label_tag }}
-                                {% if field.field.widget.input_type == 'checkbox' %}
-                                    <div class="form-check">
-                                        {% render_field field class="form-check-input" %}
-                                        <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                    </div>
-                                {% else %}
-                                    {% render_field field class="form-control" %}
-                                {% endif %}
-                                {% if field.help_text %}
-                                    <small class="form-text text-muted">{{ field.help_text }}</small>
-                                {% endif %}
-                                {% for error in field.errors %}
-                                    <div class="invalid-feedback d-block">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        {% endfor %}
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Tên học phần</label>
+                            <input type="text" class="form-control" value="{{ hoc_phan.ten_hoc_phan }}" readonly>
+                        </div>
                     </div>
-                    <div class="card-footer">
-                        <button type="submit" class="btn btn-primary">Lưu</button>
-                        <a href="{% url 'daotao:danh_sach_de_cuong' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-secondary">Hủy</a>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Mã học phần</label>
+                            <input type="text" class="form-control" value="{{ hoc_phan.ma_hoc_phan }}" readonly>
+                        </div>
                     </div>
-                </form>
+                    <div class="col-md-2">
+                        <div class="form-group">
+                            <label>Loại học phần</label>
+                            <input type="text" class="form-control" value="{{ hoc_phan.get_loai_hoc_phan_display }}" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-1">
+                        <div class="form-group">
+                            <label>Số TC</label>
+                            <input type="text" class="form-control" value="{{ hoc_phan.tong_so_tin_chi_goc }}" readonly>
+                        </div>
+                    </div>
+                     <div class="col-md-1">
+                        <div class="form-group">
+                            <label>Giờ LT</label>
+                            <input type="text" class="form-control" value="{{ hoc_phan.so_gio_ly_thuyet_goc }}" readonly>
+                        </div>
+                    </div>
+                     <div class="col-md-1">
+                        <div class="form-group">
+                            <label>Giờ TH</label>
+                            <input type="text" class="form-control" value="{{ hoc_phan.so_gio_thuc_hanh_goc }}" readonly>
+                        </div>
+                    </div>
+                     <div class="col-md-1">
+                        <div class="form-group">
+                            <label>Giờ Tự học</label>
+                            <input type="text" class="form-control" value="{{ hoc_phan.so_gio_tu_hoc_goc }}" readonly>
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Học phần tiên quyết</label>
+                            <input type="text" class="form-control" value="{{ hoc_phan.hoc_phan_tien_quyet.all|join:", " }}" readonly>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Học phần song hành</label>
+                            <input type="text" class="form-control" value="{{ hoc_phan.hoc_phan_song_hanh.all|join:", " }}" readonly>
+                        </div>
+                    </div>
+                </div>
+                 <div class="row">
+                    <div class="col-md-12">
+                        {{ form.cac_yeu_cau_khac|as_crispy_field }}
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
+        
+        <!-- 2. Nguồn học liệu -->
+        <div class="card card-info">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-book mr-2"></i>
+                    2. Nguồn học liệu
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Manually render the fields to ensure correct classes are applied -->
+                <div class="form-group">
+                    <label for="{{ form.tai_lieu_chinh.id_for_label }}" class="requiredField">
+                        {{ form.tai_lieu_chinh.label }}<span class="asteriskField">*</span>
+                    </label>
+                    {{ form.tai_lieu_chinh }}
+                    {% if form.tai_lieu_chinh.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.tai_lieu_chinh.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    <label for="{{ form.tai_lieu_tham_khao.id_for_label }}">
+                        {{ form.tai_lieu_tham_khao.label }}
+                    </label>
+                    {{ form.tai_lieu_tham_khao }}
+                     {% if form.tai_lieu_tham_khao.errors %}
+                        <div class="invalid-feedback">
+                            {% for error in form.tai_lieu_tham_khao.errors %}
+                                <span>{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+                <hr>
+                {{ form.cac_loai_hoc_lieu_khac|as_crispy_field }}
+            </div>
+        </div>
+        <!-- The old modal and formset logic is no longer needed -->
+
+        <!-- 3. Mô tả học phần -->
+        <div class="card card-secondary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-align-left mr-2"></i>
+                    3. Mô tả học phần
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {{ form.tom_tat_noi_dung|as_crispy_field }}
+            </div>
+        </div>
+
+        <!-- 4. Chuẩn đầu ra học phần (CLO) -->
+        <div class="card card-success">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-graduation-cap mr-2"></i>
+                    4. Chuẩn đầu ra học phần (CLO)
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {{ clo_formset.management_form }}
+                
+                {% for group_code, group_name in clo_groups.items %}
+                <div class="card card-outline card-success mb-3">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">{{ group_name }}</h5>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-success btn-sm add-clo-form" data-group="{{ group_code }}">
+                                <i class="fas fa-plus mr-1"></i> Thêm CĐR
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm ai-suggestion-btn ms-2" data-prompt-type="clo" data-group-name="{{ group_name }}">
+                                <i class="fas fa-magic mr-1"></i> Gợi ý từ AI
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="clo-form-list-{{ group_code }}">
+                            {% for form in clo_formset.forms %}
+                                {% if form.instance.loai_clo == group_code or not form.instance.pk %}
+                                <div class="clo-form" data-group="{{ group_code }}">
+                                    <div class="row">
+                                        <div class="col-md-1">
+                                            <div class="form-group">
+                                                <label class="sr-only">STT</label>
+                                                {{ form.ma_clo }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <div class="form-group">
+                                                <label class="sr-only">Nội dung</label>
+                                                {{ form.noi_dung }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label class="sr-only">Đáp ứng CĐR</label>
+                                                {{ form.dap_ung_cdr_ctdt }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <div class="form-group">
+                                                <label class="sr-only">Trình độ</label>
+                                                {{ form.trinh_do_nang_luc }}
+                                            </div>
+                                        </div>
+                                        <div class="col-md-1">
+                                            <div class="form-group">
+                                                <label class="sr-only">Túa</label>
+                                                {{ form.tua }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <button type="button" class="btn btn-danger btn-sm remove-clo-form">
+                                                <i class="fas fa-trash"></i> Xóa
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 7. Đánh giá học phần -->
+        <div class="card card-info">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chart-bar mr-2"></i>
+                    7. Đánh giá học phần
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {{ hinh_thuc_danh_gia_formset.management_form }}
+                <div id="danh-gia-form-list">
+                    {% for form in hinh_thuc_danh_gia_formset.forms %}
+                        <div class="danh-gia-form">
+                            {% crispy form %}
+                        </div>
+                    {% endfor %}
+                </div>
+                <button type="button" id="add-danh-gia-form" class="btn btn-info mt-2">
+                    <i class="fas fa-plus mr-1"></i> Thêm hình thức đánh giá
+                </button>
+            </div>
+        </div>
+
+        <!-- 5. Nội dung học phần -->
+        <div class="card card-warning">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-calendar-alt mr-2"></i>
+                    5. Nội dung học phần
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {{ noi_dung_formset.management_form }}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 5%">STT</th>
+                                <th style="width: 15%">Tuần học/Chủ đề</th>
+                                <th style="width: 30%">Nội dung giảng dạy</th>
+                                <th style="width: 20%">Kỹ năng mềm và thái độ</th>
+                                <th style="width: 5%">Số giờ LT</th>
+                                <th style="width: 5%">Số giờ TH</th>
+                                <th style="width: 5%">Số giờ tự học</th>
+                                <th style="width: 15%">CĐR</th>
+                            </tr>
+                        </thead>
+                        <tbody id="noi-dung-form-list">
+                            {% for form in noi_dung_formset.forms %}
+                            <tr class="noi-dung-form">
+                                <td>
+                                    <div class="form-group mb-0">
+                                        {{ forloop.counter }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group mb-0">
+                                        {{ form.tuan_hoc_hoac_chu_de }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group mb-0">
+                                        {{ form.noi_dung_giang_day }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group mb-0">
+                                        {{ form.ky_nang_thai_do }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group mb-0">
+                                        {{ form.so_gio_ly_thuyet }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group mb-0">
+                                        {{ form.so_gio_thuc_hanh }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group mb-0">
+                                        {{ form.so_gio_tu_hoc }}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="form-group mb-0">
+                                        {{ form.chuan_dau_ra_lien_quan }}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <button type="button" id="add-noi-dung-form" class="btn btn-warning">
+                            <i class="fas fa-plus mr-2"></i> Thêm tuần/chủ đề
+                        </button>
+                        <button type="button" class="btn btn-primary ai-suggestion-btn ms-2" data-prompt-type="noi_dung">
+                            <i class="fas fa-magic mr-2"></i> Gợi ý nội dung từ AI
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. Phương pháp dạy và học -->
+        <div class="card card-secondary">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-chalkboard-teacher mr-2"></i>
+                    6. Phương pháp dạy và học
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="form-group">
+                            <label>Phương pháp giảng dạy</label>
+                            <textarea class="form-control" id="id_phuong_phan_giang_day" name="phuong_phan_giang_day" rows="4" placeholder="Mô tả phương pháp giảng dạy..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. Các quy định -->
+        <div class="card card-danger">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-gavel mr-2"></i>
+                    8. Các quy định
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {{ form.quy_dinh_hoc_phan|as_crispy_field }}
+            </div>
+        </div>
+
+        <!-- 9. Danh sách giảng viên -->
+        <div class="card card-light">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i class="fas fa-users mr-2"></i>
+                    9. Dự kiến danh sách cán bộ tham gia giảng dạy
+                </h3>
+                <div class="card-tools">
+                    <button type="button" class="btn btn-tool" data-card-widget="collapse">
+                        <i class="fas fa-minus"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                {{ form.giang_vien_bien_soan|as_crispy_field }}
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="card card-secondary">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-12 text-center">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-save mr-2"></i> Lưu thay đổi
+                        </button>
+                        <a href="{% url 'daotao:danh_sach_de_cuong' pk_hoc_phan=hoc_phan.pk %}" class="btn btn-secondary btn-lg ml-2">
+                            <i class="fas fa-arrow-left mr-2"></i> Quay lại
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
 </div>
+
+<!-- Template for new forms -->
+<template id="clo-form-template">
+    <div class="clo-form">
+        {% crispy clo_formset.empty_form %}
+    </div>
+</template>
+
+<!-- Modal for AI Suggestions -->
+<div class="modal fade ai-suggestion-modal" id="ai-suggestion-modal" tabindex="-1" role="dialog" aria-labelledby="aiSuggestionModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="aiSuggestionModalLabel">
+            <i class="fas fa-magic"></i> AI-Powered Suggestions
+        </h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="text-center">
+            <div class="loading-spinner mb-3"></div>
+            <p>Đang tạo gợi ý từ AI...</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary-custom" data-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-primary-custom apply-suggestion-btn" style="display: none;">
+            <i class="fas fa-check"></i> Áp dụng gợi ý
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Modal Tai Lieu
+    $('#chonTaiLieuModal').on('shown.bs.modal', function () {
+        loadTaiLieuList();
+    });
+
+    let searchTimeout;
+    $('#taiLieuSearchInput').on('keyup', function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function () {
+            loadTaiLieuList();
+        }, 300);
+    });
+
+    function loadTaiLieuList() {
+        const query = $('#taiLieuSearchInput').val();
+        $.ajax({
+            url: "{% url 'daotao:api_search_tai_lieu' %}",
+            data: {
+                'q': query
+            },
+            success: function (data) {
+                const container = $('#taiLieuListContainer');
+                container.empty();
+                data.results.forEach(function (item) {
+                    container.append(`
+                        <div class="form-check">
+                            <input class="form-check-input tai-lieu-checkbox" type="checkbox" value="${item.id}" id="taiLieuCheck${item.id}">
+                            <label class="form-check-label" for="taiLieuCheck${item.id}">
+                                ${item.text}
+                            </label>
+                        </div>
+                    `);
+                });
+            }
+        });
+    }
+
+    $('#addSelectedTaiLieuBtn').on('click', function () {
+        const selectedIds = [];
+        $('.tai-lieu-checkbox:checked').each(function () {
+            selectedIds.push($(this).val());
+        });
+
+        selectedIds.forEach(function (id) {
+            const totalForms = document.getElementById('id_tailieus-TOTAL_FORMS');
+            const formIdx = totalForms.value;
+            const template = document.getElementById('tai-lieu-form-template').innerHTML;
+            const newFormHtml = template.replace(/__prefix__/g, formIdx);
+            
+            const formList = document.getElementById('tai-lieu-form-list');
+            formList.insertAdjacentHTML('beforeend', newFormHtml);
+            
+            const newFormElement = formList.lastElementChild;
+            const select = newFormElement.querySelector('select[name$="-tai_lieu"]');
+            
+            // Create a new option and select it
+            const option = new Option($('.tai-lieu-checkbox:checked[value="' + id + '"]').siblings('label').text(), id, true, true);
+            $(select).append(option).trigger('change');
+
+            totalForms.value = parseInt(formIdx) + 1;
+        });
+
+        $('#chonTaiLieuModal').modal('hide');
+    });
+    // Function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Update progress indicator
+    function updateProgress() {
+        const sections = document.querySelectorAll('.form-section');
+        const filledSections = Array.from(sections).filter(section => {
+            const inputs = section.querySelectorAll('input, textarea, select');
+            return Array.from(inputs).some(input => input.value.trim() !== '');
+        });
+        const progress = (filledSections.length / sections.length) * 100;
+        document.querySelector('.progress-bar').style.width = progress + '%';
+    }
+
+    // Add event listeners to all form inputs
+    document.querySelectorAll('input, textarea, select').forEach(input => {
+        input.addEventListener('input', updateProgress);
+        input.addEventListener('change', updateProgress);
+    });
+
+    // Initialize progress
+    updateProgress();
+
+    // AI Suggestion functionality
+    document.querySelectorAll('.ai-suggestion-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            const promptType = this.dataset.promptType;
+            const groupName = this.dataset.groupName || '';
+            const hocPhanTen = "{{ hoc_phan.ten_hoc_phan }}";
+            const hocPhanMoTa = document.getElementById('id_tom_tat_noi_dung').value;
+
+            let requestData = {
+                course_name: hocPhanTen,
+                course_description: hocPhanMoTa
+            };
+
+            if (promptType === 'tai_lieu') {
+                requestData.prompt = `Suggest a list of reference materials, textbooks, and online resources for the course: "${hocPhanTen}".`;
+            } else if (promptType === 'clo') {
+                requestData.clo_category = groupName;
+                requestData.prompt = `Suggest course learning outcomes (CLOs) for the category: "${groupName}" in the course: "${hocPhanTen}".`;
+            } else if (promptType === 'noi_dung') {
+                requestData.prompt = `Suggest a detailed weekly/topic-based course content plan for the course: "${hocPhanTen}". Include topics, teaching hours (theory and practice), and related learning outcomes.`;
+            }
+
+            const modal = $('#ai-suggestion-modal');
+            const modalBody = modal.find('.modal-body');
+            const applyBtn = modal.find('.apply-suggestion-btn');
+            
+            // Show loading state
+            modalBody.html(`
+                <div class="text-center">
+                    <div class="loading-spinner mb-3"></div>
+                    <p>Đang tạo gợi ý từ AI...</p>
+                </div>
+            `);
+            applyBtn.hide();
+            modal.modal('show');
+
+            fetch("{% url 'daotao:get_suggestions_api' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify(requestData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.suggestions) {
+                    modalBody.html(`
+                        <div class="suggestion-content">
+                            <pre>${data.suggestions}</pre>
+                        </div>
+                    `);
+                    applyBtn.show();
+                    // Store suggestions for later use
+                    modal.data('suggestions', data.suggestions);
+                } else {
+                    modalBody.html(`
+                        <div class="alert alert-danger-custom">
+                            <i class="fas fa-exclamation-circle"></i> 
+                            Lỗi: ${data.error || 'Không thể lấy gợi ý từ AI.'}
+                        </div>
+                    `);
+                }
+            })
+            .catch(error => {
+                modalBody.html(`
+                    <div class="alert alert-danger-custom">
+                        <i class="fas fa-exclamation-circle"></i> 
+                        Đã xảy ra lỗi không mong muốn: ${error}
+                    </div>
+                `);
+            });
+        });
+    });
+
+    // Apply suggestion functionality
+    document.querySelector('.apply-suggestion-btn')?.addEventListener('click', function() {
+        const modal = $('#ai-suggestion-modal');
+        const suggestions = modal.data('suggestions');
+        if (suggestions) {
+            // For now, just show an alert - in a real implementation, 
+            // you would parse the suggestions and populate the form
+            alert('Gợi ý đã được lưu. Vui lòng sao chép và dán vào các trường tương ứng.');
+        }
+    });
+
+    // Function to initialize Select2 on a given element
+    function initializeSelect2(element) {
+        // Initialize standard Select2, but exclude the ones we're handling with AJAX
+        $(element).find('.select2:not(.select2-ajax-tai-lieu)').select2({
+            theme: 'bootstrap4',
+            width: '100%'
+        });
+
+        // Initialize AJAX-based Select2 for Tai Lieu
+        const ajaxSelect = $(element).find('.select2-ajax-tai-lieu');
+        
+        ajaxSelect.select2({
+            theme: 'bootstrap4',
+            width: '100%',
+            placeholder: 'Tìm kiếm tài liệu...',
+            minimumInputLength: 2,
+            ajax: {
+                url: "{% url 'daotao:api_search_tai_lieu' %}",
+                dataType: 'json',
+                delay: 250,
+                data: function (params) {
+                    return {
+                        q: params.term, // search term
+                        page: params.page
+                    };
+                },
+                processResults: function (data, params) {
+                    params.page = params.page || 1;
+                    return {
+                        results: data.results,
+                        pagination: {
+                            more: (params.page * 30) < data.count_filtered
+                        }
+                    };
+                },
+                cache: true
+            },
+        });
+
+        // For multi-select fields, if the form is bound to an instance,
+        // Django will render the <option> tags for the initial values.
+        // Select2 will automatically pick them up. No extra JS is needed to display them.
+    }
+
+    // Initialize Select2 for the whole form container
+    initializeSelect2(document.querySelector('.de-cuong-form-container'));
+
+    // Handle adding new CLO forms
+    document.querySelectorAll('.add-clo-form').forEach(button => {
+        button.addEventListener('click', function() {
+            const group = this.dataset.group;
+            const template = document.getElementById('clo-form-template').innerHTML;
+            const totalForms = document.getElementById('id_clos-TOTAL_FORMS');
+            const formIdx = totalForms.value;
+            const newFormHtml = template.replace(/__prefix__/g, formIdx);
+
+            const formList = document.getElementById(`clo-form-list-${group}`);
+            formList.insertAdjacentHTML('beforeend', newFormHtml);
+            
+            const newFormElement = formList.lastElementChild;
+            // Set the hidden loai_clo field value
+            const loaiCloInput = newFormElement.querySelector('input[name$="-loai_clo"], select[name$="-loai_clo"]');
+            if (loaiCloInput) {
+                loaiCloInput.value = group;
+            }
+            
+            initializeSelect2(newFormElement);
+            
+            // Add remove button functionality
+            const removeBtn = newFormElement.querySelector('.remove-formset-btn');
+            if (removeBtn) {
+                removeBtn.addEventListener('click', function() {
+                    newFormElement.remove();
+                    updateProgress();
+                });
+            }
+
+            totalForms.value = parseInt(formIdx) + 1;
+            updateProgress();
+        });
+    });
+
+    // Handle adding new NoiDung forms
+    document.getElementById('add-noi-dung-form')?.addEventListener('click', function() {
+        const totalForms = document.getElementById('id_noi_dung_chi_tiet_de_cuongs-TOTAL_FORMS');
+        const formIdx = totalForms.value;
+        
+        // Create a new form element
+        const newFormHtml = `
+            <div class="formset-item noi-dung-form">
+                <div class="formset-item-header">
+                    <h5 class="formset-item-title">
+                        <i class="fas fa-calendar-week me-2"></i>
+                        Tuần/Chủ đề #${parseInt(formIdx) + 1}
+                    </h5>
+                    <button type="button" class="btn btn-sm btn-danger remove-formset-btn" title="Xóa nội dung">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="formset-item-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label>Tuần học/Chủ đề</label>
+                                <input type="text" name="noi_dung_chi_tiet_de_cuongs-${formIdx}-tuan_hoc_hoac_chu_de" class="form-control" id="id_noi_dung_chi_tiet_de_cuongs-${formIdx}-tuan_hoc_hoac_chu_de">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Nội dung giảng dạy</label>
+                                <textarea name="noi_dung_chi_tiet_de_cuongs-${formIdx}-noi_dung_giang_day" class="form-control" id="id_noi_dung_chi_tiet_de_cuongs-${formIdx}-noi_dung_giang_day" rows="2"></textarea>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Số giờ LT</label>
+                                <input type="number" name="noi_dung_chi_tiet_de_cuongs-${formIdx}-so_gio_ly_thuyet" class="form-control" id="id_noi_dung_chi_tiet_de_cuongs-${formIdx}-so_gio_ly_thuyet" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <div class="form-group">
+                                <label>Số giờ TH</label>
+                                <input type="number" name="noi_dung_chi_tiet_de_cuongs-${formIdx}-so_gio_thuc_hanh" class="form-control" id="id_noi_dung_chi_tiet_de_cuongs-${formIdx}-so_gio_thuc_hanh" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-1">
+                            <div class="form-group">
+                                <label>Số giờ TH</label>
+                                <input type="number" name="noi_dung_chi_tiet_de_cuongs-${formIdx}-so_gio_tu_hoc" class="form-control" id="id_noi_dung_chi_tiet_de_cuongs-${formIdx}-so_gio_tu_hoc" min="0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Chuẩn đầu ra liên quan</label>
+                        <select name="noi_dung_chi_tiet_de_cuongs-${formIdx}-chuan_dau_ra_lien_quan" class="form-control select2" id="id_noi_dung_chi_tiet_de_cuongs-${formIdx}-chuan_dau_ra_lien_quan" multiple>
+                            <option value="">-- Chọn CĐR --</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const formList = document.getElementById('noi-dung-form-list');
+        formList.insertAdjacentHTML('beforeend', newFormHtml);
+        
+        const newFormElement = formList.lastElementChild;
+        
+        // Initialize Select2 for the new form
+        initializeSelect2(newFormElement);
+        
+        // Add remove button functionality
+        const removeBtn = newFormElement.querySelector('.remove-formset-btn');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                newFormElement.remove();
+                updateProgress();
+            });
+        }
+
+        totalForms.value = parseInt(formIdx) + 1;
+        updateProgress();
+    });
+
+    // Handle remove formset buttons
+    document.querySelectorAll('.remove-formset-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            this.closest('.formset-item').remove();
+            updateProgress();
+        });
+    });
+
+    // Form validation and submission
+    const form = document.getElementById('decuong-form');
+    form.addEventListener('submit', function(e) {
+        // Basic validation
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('is-invalid');
+                isValid = false;
+            } else {
+                field.classList.remove('is-invalid');
+                field.classList.add('is-valid');
+            }
+        });
+
+        if (!isValid) {
+            e.preventDefault();
+            alert('Vui lòng điền đầy đủ các trường bắt buộc.');
+        }
+    });
+
+    // Initialize tooltips
+    $('[data-toggle="tooltip"]').tooltip();
+});
+</script>
 {% endblock %}

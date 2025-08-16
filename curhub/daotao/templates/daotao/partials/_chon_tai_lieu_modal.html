@@ -1,0 +1,28 @@
+<div class="modal fade" id="chonTaiLieuModal" tabindex="-1" role="dialog" aria-labelledby="chonTaiLieuModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="chonTaiLieuModalLabel">Chọn tài liệu học tập</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <input type="text" id="taiLieuSearchInput" class="form-control" placeholder="Tìm kiếm tài liệu...">
+                        </div>
+                    </div>
+                </div>
+                <div id="taiLieuListContainer" style="max-height: 400px; overflow-y: auto;">
+                    <!-- Danh sách tài liệu sẽ được load ở đây bằng AJAX -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-primary" id="addSelectedTaiLieuBtn">Thêm tài liệu đã chọn</button>
+            </div>
+        </div>
+    </div>
+</div>

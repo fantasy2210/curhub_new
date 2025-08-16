@@ -4,7 +4,8 @@ from .views import (
     hoc_phan_views,
     don_vi_views,
     giang_vien_views,
-    api_views
+    api_views,
+    tai_lieu_views
 )
 
 app_name = 'daotao'
@@ -72,6 +73,9 @@ urlpatterns = [
     path('hoc-phan/<int:pk_hoc_phan>/de-cuong/them/', hoc_phan_views.them_de_cuong, name='them_de_cuong'),
     path('de-cuong/<int:pk_de_cuong>/sua/', hoc_phan_views.sua_de_cuong, name='sua_de_cuong'),
     path('de-cuong/<int:pk_de_cuong>/xoa/', hoc_phan_views.xoa_de_cuong, name='xoa_de_cuong'),
+    path('de-cuong/<int:pk_de_cuong>/submit/', hoc_phan_views.submit_for_approval, name='submit_de_cuong'),
+    path('de-cuong/<int:pk_de_cuong>/approve/', hoc_phan_views.approve_de_cuong, name='approve_de_cuong'),
+    path('de-cuong/<int:pk_de_cuong>/reject/', hoc_phan_views.reject_de_cuong, name='reject_de_cuong'),
     # API for getting course details
     path('api/de-cuong-chi-tiet/<int:pk_hoc_phan>/', api_views.api_get_de_cuong_chi_tiet, name='api_get_de_cuong_chi_tiet'),
     # API for program flowchart data
@@ -90,4 +94,21 @@ urlpatterns = [
     # URL for LLM-based evaluation
     path('api/cdr/danh-gia/', api_views.danh_gia_cdr_api, name='danh_gia_cdr_api'),
     path('api/ollama-status/', api_views.get_ollama_status, name='get_ollama_status'),
+
+    # URLs for Tai Lieu Hoc Tap
+    path('tai-lieu/danh-sach/', tai_lieu_views.danh_sach_tai_lieu, name='danh_sach_tai_lieu'),
+    path('tai-lieu/them/', tai_lieu_views.them_tai_lieu, name='them_tai_lieu'),
+    path('tai-lieu/<int:pk>/sua/', tai_lieu_views.sua_tai_lieu, name='sua_tai_lieu'),
+    path('tai-lieu/<int:pk>/xoa/', tai_lieu_views.xoa_tai_lieu, name='xoa_tai_lieu'),
+    path('api/de-cuong/<int:pk_de_cuong>/suggest-tai-lieu/', api_views.api_suggest_tai_lieu, name='api_suggest_tai_lieu'),
+    
+    # URL for Teaching Method Suggestions
+    path('api/de-cuong/suggest-methods/', api_views.get_teaching_method_suggestions, name='api_suggest_teaching_methods'),
+    path('api/de-cuong/suggest-methods-from-clos/', api_views.api_suggest_teaching_methods_from_clos, name='api_suggest_teaching_methods_from_clos'),
+    path('api/de-cuong/suggest-summary/', api_views.api_suggest_summary, name='api_suggest_summary'),
+    
+    # URL for AI suggestions
+    path('api/get-suggestions/', api_views.get_suggestions_api, name='get_suggestions_api'),
+    path('api/search-tai-lieu/', api_views.api_search_tai_lieu, name='api_search_tai_lieu'),
+    path('api/check-connection/', api_views.check_api_connection_view, name='check_api_connection'),
 ]

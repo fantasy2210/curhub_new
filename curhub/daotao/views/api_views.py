@@ -1,118 +1,57 @@
-import json
-import re
-import ollama
-from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import JsonResponse, Http404
-from django.shortcuts import get_object_or_404, render
-from django.template.loader import render_to_string
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-from django.db.models import Q
+from django.views.decorators.http import require_POST, require_http_methods
+from django.contrib.auth.decorators import login_required, permission_required
+import json
+from ..suggestion_service import get_ai_suggestions, generate_syllabus_suggestions
 from ..models import (
-    ChuongTrinhDaoTao, MucTieuDaoTao, ChuanDauRa, ChiTietHocPhanTrongCTDT,
-    DanhMucKienThuc, HocPhan, DeCuongHocPhan, GiangVien, PhanCongGiangDay
+    NganhDaoTao, ChuongTrinhDaoTao, HocPhan, ChiTietHocPhanTrongCTDT,
+    DonViDaoTao, MucTieuDaoTao, ChuanDauRa, DanhMucKienThuc, DeCuongHocPhan, ChuanDauRaHocPhan, NoiDungChiTietDeCuong, HinhThucDanhGia,
+    GiangVien, PhanCongGiangDay, TaiLieuHocTap, DeCuongTaiLieu
 )
-from ..forms import MucTieuDaoTaoForm, ChuanDauRaForm
+from ..forms import (
+    NganhDaoTaoForm, ChuongTrinhDaoTaoModelForm, HocPhanLibModelForm,
+    ChiTietHocPhanTrongCTDTModelForm, DonViDaoTaoForm, MucTieuDaoTaoFormSet,
+    ChuanDauRaFormSet, UploadHocPhanCTDTForm, ChuanDauRaForm, MucTieuDaoTaoForm,
+    DanhMucKienThucForm, DeCuongHocPhanForm, ChuanDauRaHocPhanFormSet,
+    NoiDungChiTietDeCuongFormSet, HinhThucDanhGiaFormSet, DoiSanhCTDTForm
+)
+from django.shortcuts import get_object_or_404
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.db.models import Q
+import re
 
-client = ollama.Client(host='http://172.250.4.30:11434')
-
-@csrf_exempt
-@require_http_methods(["GET"])
-def get_ollama_status(request):
+@login_required
+@require_POST
+def get_suggestions_api(request):
+    """
+    API view to get AI-powered suggestions for the syllabus.
+    """
     try:
-        response = client.list()
-        return JsonResponse({'status': 'ok', 'details': response})
-    except Exception as e:
-        return JsonResponse({'status': 'error', 'message': f'Không thể kết nối đến Ollama: {e}'}, status=503)
+        data = json.loads(request.body)
+        prompt = data.get('prompt', '')
+        course_name = data.get('course_name', '')
+        course_description = data.get('course_description', '')
+        clo_category = data.get('clo_category', '')
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def danh_gia_cdr_api(request):
-    try:
-        # Step 1: Parse the incoming request from the browser
-        try:
-            data = json.loads(request.body)
-        except json.JSONDecodeError as e:
-            error_message = f"Lỗi giải mã JSON từ request: {e}. Dữ liệu nhận được: '{request.body.decode('utf-8', errors='ignore')}'"
-            return JsonResponse({'error': error_message}, status=400)
+        if not prompt and not course_name:
+            return JsonResponse({'error': 'Prompt or course name is required.'}, status=400)
 
-        cdr_text = data.get('cdr_text', '')
-        if not cdr_text:
-            return JsonResponse({'error': 'Không có văn bản CĐR nào được cung cấp.'}, status=400)
-
-        # Step 2: Prepare and send the request to Ollama
-        prompt = f"""
-Bạn là một chuyên gia về đo lường và đánh giá trong giáo dục đại học, am hiểu sâu sắc về thang đo nhận thức Bloom và cách viết chuẩn đầu ra (CĐR) hiệu quả.
-Một CĐR tốt ở Bậc 3 (Vận dụng) theo thang Bloom thường có cấu trúc 3 phần:
-1.  **Động từ hành động (Action Verb):** Động từ mạnh, có thể quan sát, đo lường được (ví dụ: Vận dụng, Áp dụng, Giải quyết, Xây dựng...).
-2.  **Đối tượng kiến thức (Knowledge Object):** Nội dung kiến thức/kỹ năng cụ thể cần sử dụng.
-3.  **Bối cảnh/Mục đích (Context):** Tình huống hoặc mục tiêu áp dụng kiến thức đó.
-Bây giờ, hãy đánh giá câu phát biểu chuẩn đầu ra chương trình đào tạo sau đây:
-"{cdr_text}"
-Hãy thực hiện các yêu cầu sau và trả lời dưới định dạng JSON:
-1.  **Phân rã CĐR** trên thành 3 thành phần: "dong_tu_hanh_dong", "doi_tuong_kien_thuc", "boi_canh_muc_dich". Nếu thành phần nào không rõ hoặc thiếu, hãy ghi "Không xác định".
-2.  **Đánh giá động từ** theo mức độ phù hợp với Bậc 3 (Vận dụng). Giá trị là một trong các chuỗi: "Rất phù hợp", "Phù hợp", "Không phù hợp". Gán vào trường "muc_do_phu_hop_dong_tu".
-3.  **Đánh giá tính rõ ràng** của CĐR. Giá trị là một trong các chuỗi: "Rất rõ ràng", "Tương đối rõ ràng", "Chung chung, cần cải thiện". Gán vào trường "tinh_ro_rang_CDR".
-4.  **Đưa ra nhận xét tổng quan** và đề xuất cải thiện (nếu có) để câu CĐR trở nên rõ ràng và hiệu quả hơn. Gán vào trường "de_xuat_cai_thien".
-5.  **Viết lại CĐR đã cải thiện** (nếu cần). Gán vào trường "cdr_cai_thien". Nếu CĐR gốc đã tốt, trả về chuỗi rỗng.
-
-Ví dụ định dạng JSON đầu ra:
-{{
-  "phan_tich_cau_truc": {{
-    "dong_tu_hanh_dong": "Vận dụng",
-    "doi_tuong_kien_thuc": "các nguyên lý marketing",
-    "boi_canh_muc_dich": "để xây dựng một kế hoạch truyền thông cơ bản"
-  }},
-  "danh_gia": {{
-    "muc_do_phu_hop_dong_tu": "Phù hợp",
-    "tinh_ro_rang_CDR": "Tương đối rõ ràng"
-  }},
-  "de_xuat_cai_thien": "CĐR có thể rõ ràng hơn bằng cách cụ thể hóa 'kế hoạch truyền thông cơ bản'.",
-  "cdr_cai_thien": "Vận dụng các nguyên lý marketing để xây dựng một kế hoạch truyền thông cơ bản cho một sản phẩm giả định."
-}}
-
-QUAN TRỌNG: Chỉ trả về đối tượng JSON hợp lệ, không có bất kỳ văn bản nào khác trước hoặc sau nó.
-"""
+        # If specific parameters are provided, use the specialized function
+        if course_name and clo_category:
+            suggestions = generate_syllabus_suggestions(course_name, course_description, clo_category)
+        else:
+            # Fall back to the general prompt-based function
+            suggestions = get_ai_suggestions(prompt)
         
-        response = client.generate(
-            model='llama3.1:8b',
-            prompt=prompt,
-            format='json',
-            options={'temperature': 0.2}
-        )
+        return JsonResponse({'suggestions': suggestions})
 
-        # Step 3: Parse the response from Ollama
-        llm_json_response_str = response.get('response', '').strip()
-
-        if not llm_json_response_str:
-            return JsonResponse({'error': 'Ollama đã trả về một phản hồi rỗng.'}, status=500)
-
-        # Attempt to extract a valid JSON object from the string
-        try:
-            # Find the start and end of the JSON object
-            start_index = llm_json_response_str.find('{')
-            end_index = llm_json_response_str.rfind('}')
-            
-            if start_index != -1 and end_index != -1 and end_index > start_index:
-                json_str_to_parse = llm_json_response_str[start_index:end_index+1]
-                llm_json_response = json.loads(json_str_to_parse)
-            else:
-                # If no JSON object is found, raise an error
-                raise json.JSONDecodeError("Không tìm thấy đối tượng JSON trong phản hồi.", llm_json_response_str, 0)
-
-        except json.JSONDecodeError as e:
-            error_message = f"Lỗi giải mã JSON từ Ollama: {e}. Dữ liệu nhận được: '{llm_json_response_str}'"
-            return JsonResponse({'error': error_message}, status=500)
-
-        return JsonResponse(llm_json_response)
-
-    except ollama.ResponseError as e:
-        return JsonResponse({'error': f'Lỗi từ Ollama: {e.error}'}, status=e.status_code)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON.'}, status=400)
     except Exception as e:
-        return JsonResponse({'error': f'Lỗi không xác định: {e}'}, status=500)
-
+        return JsonResponse({'error': str(e)}, status=500)
 
 @require_http_methods(["POST"])
+@permission_required('daotao.change_chitiethocphantrongctdt', raise_exception=True)
 def update_chi_tiet_hoc_phan_inline(request):
     try:
         pk = request.POST.get('pk')
@@ -132,6 +71,7 @@ def update_chi_tiet_hoc_phan_inline(request):
         if field not in allowed_fields:
             return JsonResponse({'status': 'error', 'message': f'Trường "{field}" không được phép chỉnh sửa.'}, status=400)
 
+        # Type conversion and validation
         if field == 'danh_muc_kien_thuc':
             if value:
                 value = get_object_or_404(DanhMucKienThuc, pk=value)
@@ -142,7 +82,9 @@ def update_chi_tiet_hoc_phan_inline(request):
         elif value == '':
              value = None
         else:
+            # For numeric fields
             try:
+                # Handle potential float values for credits
                 if 'tin_chi' in field:
                     value = float(value)
                 else:
@@ -167,10 +109,12 @@ def update_muc_tieu_dao_tao_inline(request):
     try:
         po = get_object_or_404(MucTieuDaoTao, pk=pk)
         
+        # Security check: only allow updating specific fields
         allowed_fields = ['ma_muc_tieu', 'noi_dung']
         if field not in allowed_fields:
             return JsonResponse({'status': 'error', 'message': 'Trường không được phép chỉnh sửa.'})
 
+        # Check if CTDT is in DRAFT status
         if po.chuong_trinh_dao_tao.trang_thai != 'DRAFT':
             return JsonResponse({'status': 'error', 'message': 'Chỉ có thể sửa khi CTĐT ở trạng thái "Bản nháp".'})
 
@@ -180,8 +124,9 @@ def update_muc_tieu_dao_tao_inline(request):
         return JsonResponse({'status': 'success', 'message': 'Cập nhật thành công!', 'new_value': value})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
-
+        
 @require_http_methods(["POST"])
+@permission_required('daotao.add_muctieudaotao', raise_exception=True)
 def api_them_po(request, pk_ctdt):
     ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     if ctdt.trang_thai != 'DRAFT':
@@ -196,22 +141,10 @@ def api_them_po(request, pk_ctdt):
     else:
         return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors}, status=400)
 
-@require_http_methods(["POST"])
-def sua_muc_tieu_dao_tao(request, pk_po):
-    po = get_object_or_404(MucTieuDaoTao, pk=pk_po)
-    ctdt = po.chuong_trinh_dao_tao
-
-    if ctdt.trang_thai != 'DRAFT':
-        return JsonResponse({'status': 'error', 'message': "Chỉ có thể sửa khi CTĐT ở trạng thái 'Bản nháp'."}, status=403)
-
-    form = MucTieuDaoTaoForm(request.POST, instance=po)
-    if form.is_valid():
-        form.save()
-        return JsonResponse({'status': 'success', 'message': 'Đã cập nhật Mục tiêu Đào tạo thành công!'})
-    else:
-        return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors}, status=400)
-
 def api_get_po_details(request, pk_po):
+    """
+    API endpoint to get details of a specific MucTieuDaoTao (PO) as JSON.
+    """
     po = get_object_or_404(MucTieuDaoTao, pk=pk_po)
     data = {
         'pk': po.pk,
@@ -221,6 +154,7 @@ def api_get_po_details(request, pk_po):
     return JsonResponse(data)
 
 @require_http_methods(["POST"])
+@permission_required('daotao.add_chuandaura', raise_exception=True)
 def api_them_plo(request, pk_ctdt):
     ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     if ctdt.trang_thai != 'DRAFT':
@@ -236,7 +170,22 @@ def api_them_plo(request, pk_ctdt):
     else:
         return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors}, status=400)
 
+def api_get_plo_details(request, pk_cdr):
+    """
+    API endpoint to get details of a specific ChuanDauRa (PLO) as JSON.
+    """
+    plo = get_object_or_404(ChuanDauRa, pk=pk_cdr)
+    data = {
+        'pk': plo.pk,
+        'ma_cdr': plo.ma_cdr,
+        'noi_dung': plo.noi_dung,
+        'loai_cdr': plo.loai_cdr,
+        'dap_ung_muc_tieu': list(plo.dap_ung_muc_tieu.values_list('pk', flat=True))
+    }
+    return JsonResponse(data)
+
 @require_http_methods(["POST"])
+@permission_required('daotao.change_chuandaura', raise_exception=True)
 def api_sua_plo(request, pk_cdr):
     plo = get_object_or_404(ChuanDauRa, pk=pk_cdr)
     ctdt = plo.chuong_trinh_dao_tao
@@ -251,17 +200,6 @@ def api_sua_plo(request, pk_cdr):
     else:
         return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors}, status=400)
 
-def api_get_plo_details(request, pk_cdr):
-    plo = get_object_or_404(ChuanDauRa, pk=pk_cdr)
-    data = {
-        'pk': plo.pk,
-        'ma_cdr': plo.ma_cdr,
-        'noi_dung': plo.noi_dung,
-        'loai_cdr': plo.loai_cdr,
-        'dap_ung_muc_tieu': list(plo.dap_ung_muc_tieu.values_list('pk', flat=True))
-    }
-    return JsonResponse(data)
-
 def get_nganh_dao_tao_options(request):
     return JsonResponse([], safe=False)
 
@@ -275,6 +213,7 @@ def search_hoc_phan_api(request):
 
     if ctdt_pk:
         try:
+            # Search within the context of a specific CTDT
             ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=ctdt_pk)
             queryset = ChiTietHocPhanTrongCTDT.objects.filter(chuong_trinh_dao_tao=ctdt).order_by('hoc_phan__ma_hoc_phan')
             
@@ -286,6 +225,7 @@ def search_hoc_phan_api(request):
         except ChuongTrinhDaoTao.DoesNotExist:
             return JsonResponse({'results': [], 'pagination': {'more': False}}, status=404)
     else:
+        # Fallback to global search if no ctdt_pk is provided
         queryset = HocPhan.objects.all().order_by('ma_hoc_phan')
         if search_term:
             queryset = queryset.filter(
@@ -293,12 +233,13 @@ def search_hoc_phan_api(request):
                 Q(ten_hoc_phan__icontains=search_term)
             )
 
-    paginator = Paginator(queryset, 30)
+    paginator = Paginator(queryset, 30)  # 30 results per page
     try:
         hoc_phan_page = paginator.page(page)
     except PageNotAnInteger:
         hoc_phan_page = paginator.page(1)
     except EmptyPage:
+        # If page is out of range (e.g. 9999), deliver last page of results.
         hoc_phan_page = paginator.page(paginator.num_pages)
 
     results = []
@@ -315,13 +256,38 @@ def search_hoc_phan_api(request):
         }
     })
 
+def get_hoc_phan_details(request, pk_hoc_phan):
+    """
+    API endpoint to get default details for a specific HocPhan.
+    """
+    try:
+        hoc_phan = get_object_or_404(HocPhan, pk=pk_hoc_phan)
+        data = {
+            'tin_chi_ly_thuyet_apdung': hoc_phan.tin_chi_ly_thuyet_goc,
+            'tin_chi_thuc_hanh_apdung': hoc_phan.tin_chi_thuc_hanh_goc,
+            'so_gio_ly_thuyet_apdung': hoc_phan.so_gio_ly_thuyet_goc,
+            'so_gio_thuc_hanh_apdung': hoc_phan.so_gio_thuc_hanh_goc,
+            'so_gio_tu_hoc_apdung': hoc_phan.so_gio_tu_hoc_goc,
+            # Add any other fields you want to auto-populate
+        }
+        return JsonResponse(data)
+    except Http404:
+        return JsonResponse({'error': 'HocPhan not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 def search_hoc_phan_in_ctdt_api(request, pk_ctdt):
+    """
+    API endpoint for Select2 to search for courses (ChiTietHocPhanTrongCTDT)
+    within a specific curriculum (CTDT).
+    """
     search_term = request.GET.get('q', '')
     page = request.GET.get('page', 1)
     
     try:
         ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
         
+        # Query ChiTietHocPhanTrongCTDT objects related to the specific CTDT
         queryset = ChiTietHocPhanTrongCTDT.objects.filter(
             chuong_trinh_dao_tao=ctdt
         ).select_related('hoc_phan').order_by('hoc_phan__ma_hoc_phan')
@@ -332,6 +298,7 @@ def search_hoc_phan_in_ctdt_api(request, pk_ctdt):
                 Q(hoc_phan__ten_hoc_phan__icontains=search_term)
             )
             
+        # Exclude the current course being edited, if its PK is provided
         exclude_pk = request.GET.get('exclude_pk')
         if exclude_pk:
             queryset = queryset.exclude(pk=exclude_pk)
@@ -360,23 +327,11 @@ def search_hoc_phan_in_ctdt_api(request, pk_ctdt):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-def get_hoc_phan_details(request, pk_hoc_phan):
-    try:
-        hoc_phan = get_object_or_404(HocPhan, pk=pk_hoc_phan)
-        data = {
-            'tin_chi_ly_thuyet_apdung': hoc_phan.tin_chi_ly_thuyet_goc,
-            'tin_chi_thuc_hanh_apdung': hoc_phan.tin_chi_thuc_hanh_goc,
-            'so_gio_ly_thuyet_apdung': hoc_phan.so_gio_ly_thuyet_goc,
-            'so_gio_thuc_hanh_apdung': hoc_phan.so_gio_thuc_hanh_goc,
-            'so_gio_tu_hoc_apdung': hoc_phan.so_gio_tu_hoc_goc,
-        }
-        return JsonResponse(data)
-    except Http404:
-        return JsonResponse({'error': 'HocPhan not found'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
 def api_get_de_cuong_chi_tiet(request, pk_hoc_phan):
+    """
+    API endpoint to get the detailed content of the active syllabus for a course.
+    """
+    # Find the active syllabus for the given course
     de_cuong = get_object_or_404(
         DeCuongHocPhan.objects.select_related('hoc_phan', 'hoc_phan__don_vi_quan_ly_goc'), 
         hoc_phan__pk=pk_hoc_phan, 
@@ -384,6 +339,8 @@ def api_get_de_cuong_chi_tiet(request, pk_hoc_phan):
     )
     
     hoc_phan = de_cuong.hoc_phan
+
+    # Serialize the main syllabus data
     data = {
         'ten_hoc_phan': hoc_phan.ten_hoc_phan,
         'ma_hoc_phan': hoc_phan.ma_hoc_phan,
@@ -402,6 +359,8 @@ def api_get_de_cuong_chi_tiet(request, pk_hoc_phan):
         'noi_dung_chi_tiet': [],
         'hinh_thuc_danh_gia': []
     }
+
+    # Serialize related CLOs (ChuanDauRaHocPhan)
     clos = de_cuong.chuan_dau_ra_cua_de_cuong.all().order_by('ma_clo')
     for clo in clos:
         data['chuan_dau_ra'].append({
@@ -409,6 +368,8 @@ def api_get_de_cuong_chi_tiet(request, pk_hoc_phan):
             'noi_dung': clo.noi_dung,
             'muc_do_bloom': clo.get_muc_do_bloom_display()
         })
+
+    # Serialize detailed content (NoiDungChiTietDeCuong)
     noi_dungs = de_cuong.noi_dung_chi_tiet.prefetch_related('chuan_dau_ra_lien_quan').order_by('tuan_hoc_hoac_chu_de')
     for nd in noi_dungs:
         data['noi_dung_chi_tiet'].append({
@@ -419,6 +380,8 @@ def api_get_de_cuong_chi_tiet(request, pk_hoc_phan):
             'so_gio_tu_hoc': nd.so_gio_tu_hoc,
             'chuan_dau_ra_lien_quan': [clo.ma_clo for clo in nd.chuan_dau_ra_lien_quan.all()]
         })
+
+    # Serialize evaluation methods (HinhThucDanhGia)
     danh_gias = de_cuong.hinh_thuc_danh_gia.prefetch_related('chuan_dau_ra_danh_gia').order_by('loai_danh_gia')
     for dg in danh_gias:
         data['hinh_thuc_danh_gia'].append({
@@ -427,10 +390,15 @@ def api_get_de_cuong_chi_tiet(request, pk_hoc_phan):
             'ty_le_diem': dg.ty_le_diem,
             'chuan_dau_ra_danh_gia': [clo.ma_clo for clo in dg.chuan_dau_ra_danh_gia.all()]
         })
+
     return JsonResponse(data)
 
 def api_program_flowchart_data(request, pk_ctdt):
+    """
+    API endpoint to provide data for the Mermaid.js program flowchart.
+    """
     def clean_mermaid_id(text):
+        # Remove any character that is not a letter, number, or underscore
         return re.sub(r'[^a-zA-Z0-9_]', '', text)
 
     try:
@@ -443,9 +411,12 @@ def api_program_flowchart_data(request, pk_ctdt):
 
         nodes = []
         edges = []
+        
+        # Use a set to keep track of added nodes to avoid duplicates
         added_nodes = set()
 
         for detail in details:
+            # Use the original ma_hoc_phan for mapping, but a cleaned version for Mermaid ID
             original_hp_id = detail.hoc_phan.ma_hoc_phan
             hp_mermaid_id = clean_mermaid_id(original_hp_id)
             
@@ -459,14 +430,16 @@ def api_program_flowchart_data(request, pk_ctdt):
                 })
                 added_nodes.add(hp_mermaid_id)
 
+            # Add prerequisite edges
             for tien_quyet_detail in detail.hoc_phan_tien_quyet.all():
-                source__id = clean_mermaid_id(tien_quyet_detail.hoc_phan.ma_hoc_phan)
+                source_id = clean_mermaid_id(tien_quyet_detail.hoc_phan.ma_hoc_phan)
                 edges.append({
                     'source': source_id,
                     'target': hp_mermaid_id,
                     'type': 'tienquyet'
                 })
 
+            # Add concurrent edges
             for song_hanh_detail in detail.hoc_phan_song_hanh.all():
                 source_id = clean_mermaid_id(song_hanh_detail.hoc_phan.ma_hoc_phan)
                 edges.append({
@@ -482,60 +455,176 @@ def api_program_flowchart_data(request, pk_ctdt):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+def danh_gia_cdr_api(request):
+    return JsonResponse({})
+
+def get_ollama_status(request):
+    return JsonResponse({})
+
+def api_suggest_tai_lieu(request, pk_de_cuong):
+    return JsonResponse({})
+
+def get_teaching_method_suggestions(request):
+    return JsonResponse({})
+
+def api_suggest_teaching_methods_from_clos(request):
+    return JsonResponse({})
+
+def api_suggest_summary(request):
+    return JsonResponse({})
+
 def api_search_giang_vien_chua_tham_gia(request, pk_ctdt):
     ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
     search_term = request.GET.get('q', '')
-
-    # Lấy danh sách ID của giảng viên đã tham gia
-    assigned_gv_ids = ctdt.giang_vien_tham_gia.values_list('id', flat=True)
     
-    # Lấy danh sách giảng viên chưa tham gia
-    giang_vien_list = GiangVien.objects.exclude(id__in=assigned_gv_ids)
-
+    queryset = GiangVien.objects.exclude(chuongtrinhdaotao=ctdt)
     if search_term:
-        giang_vien_list = giang_vien_list.filter(
-            Q(ho_ten__icontains=search_term) | 
+        queryset = queryset.filter(
+            Q(ho__icontains=search_term) |
+            Q(ten__icontains=search_term) |
             Q(ma_can_bo__icontains=search_term)
         )
     
-    html = render_to_string(
-        'daotao/partials/_giang_vien_chua_tham_gia_list.html',
-        {
-            'giang_vien_chua_tham_gia': giang_vien_list,
-            'ctdt': ctdt,
-            'is_draft': ctdt.trang_thai == 'DRAFT',
-            'perms': request.user.get_all_permissions()
-        }
-    )
-    return JsonResponse({'html': html})
+    results = [
+        {'id': gv.pk, 'text': gv.ho_ten}
+        for gv in queryset[:50]
+    ]
+    
+    return JsonResponse({'results': results})
 
+from django.http import HttpResponse
+
+def check_api_connection_view(request):
+    """
+    A simple view to diagnose the connection to the external API from the web server process.
+    """
+    API_URL = 'http://172.16.2.92:8000/search'
+    html = "<html><body><h1>API Connection Test</h1>"
+    html += f"<p>Attempting to connect to API at: {API_URL}</p>"
+    
+    try:
+        params = {'keyword': 'Zotero', 'limit': 1}
+        response = requests.get(API_URL, params=params, timeout=10)
+        response.raise_for_status()
+        
+        html += '<p style="color:green;">Connection successful!</p>'
+        html += f"<p>The API responded with status code: {response.status_code}</p>"
+        
+        try:
+            data = response.json()
+            html += "<p>Successfully decoded JSON response.</p>"
+            html += f"<p>Found {len(data)} item(s) in response.</p>"
+            html += f"<pre>{json.dumps(data, indent=2)}</pre>"
+        except ValueError:
+            html += '<p style="color:red;">Failed to decode JSON from the response.</p>'
+
+    except requests.exceptions.Timeout:
+        html += '<p style="color:red;"><b>Connection timed out.</b> The API server is not responding.</p>'
+        html += "<p>This confirms the Django web server process cannot reach the API server. Please check for firewalls or network configuration issues that might be blocking the connection for the web server.</p>"
+    except requests.exceptions.ConnectionError as e:
+        html += '<p style="color:red;"><b>Connection failed.</b> Could not connect to the API server.</p>'
+        html += f"<p>Error details: {e}</p>"
+        html += "<p>This is likely a network issue (e.g., firewall, DNS, incorrect IP) between the Django server and the API server.</p>"
+    except Exception as e:
+        html += f'<p style="color:red;">An unexpected error occurred: {e}</p>'
+        
+    html += "</body></html>"
+    return HttpResponse(html)
 
 def api_get_giang_vien_da_tham_gia(request, pk_ctdt):
     ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
-    search_term = request.GET.get('q', '')
-
-    # Lấy danh sách giảng viên đã tham gia
-    giang_vien_list = ctdt.giang_vien_tham_gia.all()
-
-    if search_term:
-        giang_vien_list = giang_vien_list.filter(
-            Q(ho_ten__icontains=search_term) | 
-            Q(ma_can_bo__icontains=search_term)
-        )
-
-    html = render_to_string(
-        'daotao/partials/_giang_vien_da_tham_gia_list.html',
-        {
-            'giang_vien_da_tham_gia': giang_vien_list,
-            'ctdt': ctdt,
-            'is_draft': ctdt.trang_thai == 'DRAFT',
-            'perms': request.user.get_all_permissions()
-        }
-    )
-    return JsonResponse({'html': html})
+    
+    giang_vien_list = ctdt.giang_vien_tham_gia.all().order_by('ten', 'ho')
+    
+    results = [
+        {'id': gv.pk, 'text': gv.ho_ten}
+        for gv in giang_vien_list
+    ]
+    
+    return JsonResponse({'results': results})
 
 def api_get_phan_cong_form(request, pk_ctdt, pk_gv):
     return JsonResponse({})
 
 def api_luu_phan_cong(request, pk_ctdt):
     return JsonResponse({})
+    
+@permission_required('daotao.change_muctieudaotao', raise_exception=True)
+@require_http_methods(["POST"])
+def sua_muc_tieu_dao_tao(request, pk_po):
+    po = get_object_or_404(MucTieuDaoTao, pk=pk_po)
+    ctdt = po.chuong_trinh_dao_tao
+
+    if ctdt.trang_thai != 'DRAFT':
+        return JsonResponse({'status': 'error', 'message': "Chỉ có thể sửa khi CTĐT ở trạng thái 'Bản nháp'."}, status=403)
+
+    form = MucTieuDaoTaoForm(request.POST, instance=po)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'status': 'success', 'message': 'Đã cập nhật Mục tiêu Đào tạo thành công!'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Dữ liệu không hợp lệ.', 'errors': form.errors}, status=400)
+
+import requests
+
+@login_required
+def api_search_tai_lieu(request):
+    search_term = request.GET.get('q', '').strip()
+    # 1. Add a minimum length check for the search term
+    if len(search_term) < 3:
+        return JsonResponse({'results': []})
+
+    # --- Combined Search Logic ---
+    found_pks = set()
+
+    # Step 1: Search locally and collect primary keys
+    local_queryset = TaiLieuHocTap.objects.filter(
+        Q(nhan_de__icontains=search_term) |
+        Q(tac_gia__icontains=search_term)
+    )[:50]
+    for item in local_queryset:
+        found_pks.add(item.pk)
+
+    # Step 2: Search external API
+    API_URL = 'http://172.16.2.92:8000/search'
+    params = {'keyword': search_term, 'limit': 50}
+    
+    try:
+        # 2. Increase the timeout to 30 seconds
+        response = requests.get(API_URL, params=params, timeout=30)
+        response.raise_for_status()
+        api_results = response.json()
+
+        for item in api_results:
+            if not item.get('bib_id'):
+                continue
+            
+            # Sync with local DB
+            obj, created = TaiLieuHocTap.objects.update_or_create(
+                bib_id=item.get('bib_id'),
+                defaults={
+                    'nhan_de': item.get('nhan_de'),
+                    'tac_gia': item.get('tac_gia'),
+                    'nam_xuat_ban': item.get('nam_xuat_ban'),
+                    'duong_dan': item.get('duong_dan'),
+                    'nha_xuat_ban': item.get('nha_xuat_ban'),
+                    'loai_tai_lieu': 'SACH'
+                }
+            )
+            found_pks.add(obj.pk)
+            
+    except requests.exceptions.RequestException as e:
+        # Log the error but don't stop. This allows local results to still be returned.
+        print(f"API search failed: {e}")
+
+    # Step 3: Query all unique results from the local DB and format for Select2
+    final_queryset = TaiLieuHocTap.objects.filter(pk__in=list(found_pks))
+    results = [
+        {
+            'id': tl.pk,
+            'text': f"{tl.nhan_de} ({tl.tac_gia}, {tl.nam_xuat_ban or 'N/A'})",
+        }
+        for tl in final_queryset
+    ]
+    
+    return JsonResponse({'results': results})

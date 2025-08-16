@@ -23,6 +23,7 @@
                             <th>Tên/Phiên bản Đề cương</th>
                             <th>Ngày ban hành</th>
                             <th>Trạng thái</th>
+                            <th>Hiện hành</th>
                             <th>Hành động</th>
                         </tr>
                     </thead>
@@ -32,16 +33,46 @@
                             <td>{{ dc.ten_de_cuong_phien_ban }}</td>
                             <td>{{ dc.ngay_ban_hanh|date:"d/m/Y" }}</td>
                             <td>
-                                {% if dc.la_phien_ban_hien_hanh %}
-                                    <span class="badge badge-success">Hiện hành</span>
-                                {% else %}
-                                    <span class="badge badge-secondary">Cũ</span>
+                                {% if dc.trang_thai == 'DRAFT' %}
+                                    <span class="badge badge-secondary">Bản nháp</span>
+                                {% elif dc.trang_thai == 'PENDING_APPROVAL' %}
+                                    <span class="badge badge-warning">Chờ duyệt</span>
+                                {% elif dc.trang_thai == 'APPROVED' %}
+                                    <span class="badge badge-success">Đã phê duyệt</span>
+                                {% elif dc.trang_thai == 'REJECTED' %}
+                                    <span class="badge badge-danger">Bị từ chối</span>
                                 {% endif %}
                             </td>
                             <td>
-                                <a href="#" class="btn btn-sm btn-primary">Xem chi tiết</a>
-                                <a href="{% url 'daotao:sua_de_cuong' dc.pk %}" class="btn btn-sm btn-info">Sửa</a>
-                                <a href="{% url 'daotao:xoa_de_cuong' dc.pk %}" class="btn btn-sm btn-danger">Xóa</a>
+                                {% if dc.la_phien_ban_hien_hanh %}
+                                    <span class="badge badge-success">Có</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Không</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="#" class="btn btn-sm btn-primary my-1">Xem</a>
+                                
+                                {% if dc.trang_thai == 'DRAFT' or dc.trang_thai == 'REJECTED' %}
+                                    <a href="{% url 'daotao:sua_de_cuong' dc.pk %}" class="btn btn-sm btn-info my-1">Sửa</a>
+                                    <form action="{% url 'daotao:submit_de_cuong' dc.pk %}" method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-warning my-1">Gửi duyệt</button>
+                                    </form>
+                                {% endif %}
+
+                                {% if perms.daotao.can_approve_decuong and dc.trang_thai == 'PENDING_APPROVAL' %}
+                                    <form action="{% url 'daotao:approve_de_cuong' dc.pk %}" method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-success my-1">Phê duyệt</button>
+                                    </form>
+                                    <form action="{% url 'daotao:reject_de_cuong' dc.pk %}" method="post" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger my-1">Từ chối</button>
+                                    </form>
+                                {% endif %}
+                                
+                                <a href="{% url 'daotao:xoa_de_cuong' dc.pk %}" class="btn btn-sm btn-danger my-1">Xóa</a>
                             </td>
                         </tr>
                     {% endfor %}

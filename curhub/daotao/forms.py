@@ -1,11 +1,11 @@
 from django import forms
 from django.forms import inlineformset_factory
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Row, Column, Fieldset, Submit, HTML
+from crispy_forms.layout import Layout, Row, Column, Fieldset, Submit, HTML, Field
 from .models import (
     NganhDaoTao, ChuongTrinhDaoTao, HocPhan, ChiTietHocPhanTrongCTDT,
     DonViDaoTao, MucTieuDaoTao, ChuanDauRa, DanhMucKienThuc, DeCuongHocPhan, ChuanDauRaHocPhan, NoiDungChiTietDeCuong, HinhThucDanhGia,
-    GiangVien, PhanCongGiangDay
+    GiangVien, PhanCongGiangDay, TaiLieuHocTap, DeCuongTaiLieu
 )
 
 class NganhDaoTaoForm(forms.ModelForm):
@@ -267,74 +267,167 @@ class DanhMucKienThucForm(forms.ModelForm):
         fields = '__all__'
 
 class DeCuongHocPhanForm(forms.ModelForm):
+    # New fields for selecting main and reference documents
+    tai_lieu_chinh = forms.ModelMultipleChoiceField(
+        queryset=TaiLieuHocTap.objects.all(),
+        widget=forms.SelectMultiple(attrs={'class': 'select2-ajax-tai-lieu', 'data-placeholder': 'Chọn tài liệu chính...'}),
+        required=True,
+        label="2.1 Tài liệu chính (yêu cầu ít nhất 1)"
+    )
+    tai_lieu_tham_khao = forms.ModelMultipleChoiceField(
+        queryset=TaiLieuHocTap.objects.all(),
+        widget=forms.SelectMultiple(attrs={'class': 'select2-ajax-tai-lieu', 'data-placeholder': 'Chọn tài liệu tham khảo...'}),
+        required=False,
+        label="2.2 Tài liệu tham khảo"
+    )
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        
+        # If editing an existing instance, populate the initial values for the new fields
+        if self.instance and self.instance.pk:
+            # Get all related documents and categorize them
+            main_docs = self.instance.tailieu_lien_ket.filter(loai_lien_ket='MAIN').values_list('tai_lieu_id', flat=True)
+            ref_docs = self.instance.tailieu_lien_ket.filter(loai_lien_ket='REFERENCE').values_list('tai_lieu_id', flat=True)
+            
+            self.initial['tai_lieu_chinh'] = list(main_docs)
+            self.initial['tai_lieu_tham_khao'] = list(ref_docs)
+
+            # The queryset for the fields must contain the initial values for validation
+            all_selected_ids = list(main_docs) + list(ref_docs)
+            self.fields['tai_lieu_chinh'].queryset = TaiLieuHocTap.objects.filter(id__in=all_selected_ids)
+            self.fields['tai_lieu_tham_khao'].queryset = TaiLieuHocTap.objects.filter(id__in=all_selected_ids)
+        else:
+            # For new forms, the queryset should be empty.
+            self.fields['tai_lieu_chinh'].queryset = TaiLieuHocTap.objects.none()
+            self.fields['tai_lieu_tham_khao'].queryset = TaiLieuHocTap.objects.none()
+
         self.helper = FormHelper()
         self.helper.form_method = 'post'
         self.helper.layout = Layout(
-            Row(
-                Column(
-                    Fieldset(
-                        'Thông tin Phiên bản',
-                        Row(
-                            Column('ten_de_cuong_phien_ban', css_class='form-group col-md-6 mb-0'),
-                            Column('so_phien_ban', css_class='form-group col-md-3 mb-0'),
-                            Column('ngay_ban_hanh', css_class='form-group col-md-3 mb-0'),
-                        ),
-                        'ly_do_cap_nhat',
-                        'la_phien_ban_hien_hanh',
-                        css_class='card-body'
-                    ),
-                    css_class='col-md-12'
-                ),
-            ),
-            Row(
-                Column('muc_tieu_hoc_phan', css_class='col-md-6'),
-                Column('tom_tat_noi_dung', css_class='col-md-6'),
-            ),
-            Row(
-                Column('phuong_phap_day_hoc', css_class='col-md-6'),
-                Column('nhiem_vu_sinh_vien', css_class='col-md-6'),
-            ),
-            Row(
-                Column('thang_diem_danh_gia', css_class='col-md-6'),
-                Column('tai_lieu_hoc_tap', css_class='col-md-6'),
-            ),
-            Row(
-                Column('cac_yeu_cau_khac', css_class='col-md-12'),
-            )
+            # Existing layout fields...
+            # I will add the new fields to the layout in the template directly for now.
         )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        tai_lieu_chinh = cleaned_data.get("tai_lieu_chinh")
+        tai_lieu_tham_khao = cleaned_data.get("tai_lieu_tham_khao")
+
+        if tai_lieu_chinh and tai_lieu_tham_khao:
+            # Check for any intersection between the two querysets
+            if set(tai_lieu_chinh).intersection(set(tai_lieu_tham_khao)):
+                raise forms.ValidationError(
+                    "Một tài liệu không thể vừa là tài liệu chính vừa là tài liệu tham khảo."
+                )
+        
+        return cleaned_data
+
+    def save(self, commit=True):
+        # Override save to handle the new M2M-like fields
+        instance = super().save(commit)
+        
+        # Clear existing relations
+        instance.tailieu_lien_ket.all().delete()
+        
+        # Add new relations for main documents
+        for tai_lieu in self.cleaned_data['tai_lieu_chinh']:
+            DeCuongTaiLieu.objects.create(de_cuong=instance, tai_lieu=tai_lieu, loai_lien_ket='MAIN')
+            
+        # Add new relations for reference documents
+        for tai_lieu in self.cleaned_data['tai_lieu_tham_khao']:
+            DeCuongTaiLieu.objects.create(de_cuong=instance, tai_lieu=tai_lieu, loai_lien_ket='REFERENCE')
+            
+        return instance
 
     class Meta:
         model = DeCuongHocPhan
         fields = [
-            'ten_de_cuong_phien_ban', 'so_phien_ban', 'ngay_ban_hanh',
-            'ly_do_cap_nhat', 'la_phien_ban_hien_hanh', 'muc_tieu_hoc_phan',
-            'tom_tat_noi_dung', 'phuong_phap_day_hoc', 'nhiem_vu_sinh_vien',
-            'thang_diem_danh_gia', 'tai_lieu_hoc_tap', 'cac_yeu_cau_khac'
+            'tom_tat_noi_dung',
+            'phuong_phap_day_hoc',
+            'thang_diem_danh_gia',
+            'cac_yeu_cau_khac',
+            'quy_dinh_hoc_phan',
+            'cac_loai_hoc_lieu_khac',
+            'giang_vien_bien_soan',
+            # Các trường khác của DeCuongHocPhan có thể được thêm vào đây nếu cần chỉnh sửa trên cùng form
+            # Ví dụ: 'ten_de_cuong_phien_ban', 'ngay_ban_hanh', 'la_phien_ban_hien_hanh'
         ]
         widgets = {
-            'ngay_ban_hanh': forms.DateInput(attrs={'type': 'date'}),
-            'ly_do_cap_nhat': forms.Textarea(attrs={'rows': 3}),
-            'muc_tieu_hoc_phan': forms.Textarea(attrs={'class': 'summernote'}),
-            'tom_tat_noi_dung': forms.Textarea(attrs={'class': 'summernote'}),
-            'phuong_phap_day_hoc': forms.Textarea(attrs={'class': 'summernote'}),
-            'nhiem_vu_sinh_vien': forms.Textarea(attrs={'class': 'summernote'}),
-            'thang_diem_danh_gia': forms.Textarea(attrs={'class': 'summernote'}),
-            'tai_lieu_hoc_tap': forms.Textarea(attrs={'class': 'summernote'}),
-            'cac_yeu_cau_khac': forms.Textarea(attrs={'class': 'summernote'}),
+            'tom_tat_noi_dung': forms.Textarea(attrs={'class': 'summernote', 'rows': 5}),
+            'phuong_phap_day_hoc': forms.Textarea(attrs={'class': 'summernote', 'rows': 4}),
+            'thang_diem_danh_gia': forms.Textarea(attrs={'class': 'summernote', 'rows': 4}),
+            'cac_yeu_cau_khac': forms.Textarea(attrs={'rows': 3}),
+            'quy_dinh_hoc_phan': forms.Textarea(attrs={'class': 'summernote', 'rows': 4}),
+            'cac_loai_hoc_lieu_khac': forms.Textarea(attrs={'rows': 3}),
+            'giang_vien_bien_soan': forms.SelectMultiple(attrs={'class': 'select2'}),
+        }
+        labels = {
+            'tom_tat_noi_dung': '3. Mô tả học phần (Course description)',
+            'phuong_phap_day_hoc': '4. Phương pháp dạy và học',
+            'thang_diem_danh_gia': '5. Thang điểm/Cách đánh giá',
+            'cac_yeu_cau_khac': '6. Các yêu cầu khác',
+            'quy_dinh_hoc_phan': '8. Các quy định',
+            'cac_loai_hoc_lieu_khac': '2.3 Các loại học liệu khác', # This field will now be manually placed
+            'giang_vien_bien_soan': '9. Giảng viên biên soạn',
         }
 
+
 class ChuanDauRaHocPhanForm(forms.ModelForm):
+    dap_ung_cdr_ctdt = forms.ModelMultipleChoiceField(
+        queryset=ChuanDauRa.objects.none(),
+        widget=forms.SelectMultiple(attrs={'class': 'select2', 'data-placeholder': 'Chọn CĐR của CTĐT'}),
+        required=False,
+        label="Đáp ứng CĐR của CTĐT"
+    )
+
     class Meta:
         model = ChuanDauRaHocPhan
-        fields = ['ma_clo', 'loai_clo', 'noi_dung', 'muc_do_bloom']
+        fields = ['ma_clo', 'noi_dung', 'loai_clo', 'dap_ung_cdr_ctdt', 'trinh_do_nang_luc', 'tua']
         widgets = {
-            'ma_clo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Mã CLO'}),
+            'ma_clo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'CLO.1'}),
+            'noi_dung': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'loai_clo': forms.Select(attrs={'class': 'form-control'}),
-            'noi_dung': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'Nội dung'}),
-            'muc_do_bloom': forms.Select(attrs={'class': 'form-control'}),
+            'trinh_do_nang_luc': forms.TextInput(attrs={'class': 'form-control'}),
+            'tua': forms.Select(attrs={'class': 'form-control'}),
         }
+        labels = {
+            'ma_clo': 'STT',
+            'noi_dung': 'Chuẩn đầu ra của học phần',
+            'loai_clo': 'Phân loại (ẩn/hiện theo nhóm)',
+            'trinh_do_nang_luc': 'Trình độ năng lực',
+        }
+
+    def __init__(self, *args, **kwargs):
+        # Lấy instance của DeCuongHocPhan từ view để lọc ChuanDauRa (PLO)
+        de_cuong_instance = kwargs.pop('de_cuong', None)
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_tag = False # Không render a <form> tag
+        self.helper.disable_csrf = True
+        self.helper.layout = Layout(
+            Row(
+                Column('ma_clo', css_class='form-group col-md-1 mb-0'),
+                Column('noi_dung', css_class='form-group col-md-5 mb-0'),
+                Column('dap_ung_cdr_ctdt', css_class='form-group col-md-3 mb-0'),
+                Column('trinh_do_nang_luc', css_class='form-group col-md-2 mb-0'),
+                Column('tua', css_class='form-group col-md-1 mb-0'),
+                # Ẩn trường loai_clo, giá trị của nó sẽ được set bằng JS dựa vào nhóm
+                Field('loai_clo', type="hidden"),
+            )
+        )
+
+        if de_cuong_instance:
+            # Tìm các CTĐT có chứa học phần này
+            ctdt_pks = ChiTietHocPhanTrongCTDT.objects.filter(
+                hoc_phan=de_cuong_instance.hoc_phan
+            ).values_list('chuong_trinh_dao_tao_id', flat=True)
+            
+            if ctdt_pks:
+                # Lọc các PLO thuộc các CTĐT đó
+                self.fields['dap_ung_cdr_ctdt'].queryset = ChuanDauRa.objects.filter(
+                    chuong_trinh_dao_tao_id__in=list(ctdt_pks)
+                ).order_by('ma_cdr')
 
 ChuanDauRaHocPhanFormSet = inlineformset_factory(
     DeCuongHocPhan,
@@ -350,10 +443,11 @@ class NoiDungChiTietDeCuongForm(forms.ModelForm):
     class Meta:
         model = NoiDungChiTietDeCuong
         fields = ['tuan_hoc_hoac_chu_de', 'noi_dung_giang_day', 'so_gio_ly_thuyet',
-                  'so_gio_thuc_hanh', 'so_gio_tu_hoc', 'chuan_dau_ra_lien_quan']
+                  'so_gio_thuc_hanh', 'so_gio_tu_hoc', 'ky_nang_thai_do', 'chuan_dau_ra_lien_quan']
         widgets = {
             'noi_dung_giang_day': forms.Textarea(attrs={'rows': 2}),
-            'chuan_dau_ra_hoc_phan': forms.SelectMultiple(attrs={'class': 'select2'}),
+            'ky_nang_thai_do': forms.Textarea(attrs={'rows': 2}),
+            'chuan_dau_ra_lien_quan': forms.SelectMultiple(attrs={'class': 'select2'}),
         }
 
 NoiDungChiTietDeCuongFormSet = inlineformset_factory(
@@ -383,8 +477,7 @@ class DoiSanhCTDTForm(forms.Form):
         self.helper.form_method = 'post'
         self.helper.layout = Layout(
             Row(
-                Column('ctdt1', css_class='form-group col-md-6 mb-0'),
-                Column('ctdt2', css_class='form-group col-md-6 mb-0'),
+                Column('tom_tat_noi_dung', css_class='col-md-12'),
             ),
             Submit('submit', 'Đối sánh', css_class='btn btn-primary mt-3')
         )
@@ -422,3 +515,99 @@ class PhanCongForm(forms.ModelForm):
         widgets = {
             'giang_vien': forms.Select(attrs={'class': 'select2'}),
         }
+
+class TaiLieuHocTapForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            Fieldset(
+                'Thông tin Tài liệu',
+                Row(
+                    Column('nhan_de', css_class='form-group col-md-12 mb-0'),
+                ),
+                Row(
+                    Column('tac_gia', css_class='form-group col-md-6 mb-0'),
+                    Column('ngon_ngu', css_class='form-group col-md-6 mb-0'),
+                ),
+                Row(
+                    Column('nha_xuat_ban', css_class='form-group col-md-6 mb-0'),
+                    Column('noi_xuat_ban', css_class='form-group col-md-6 mb-0'),
+                ),
+                Row(
+                    Column('nam_xuat_ban', css_class='form-group col-md-4 mb-0'),
+                    Column('dewey', css_class='form-group col-md-4 mb-0'),
+                    Column('cutter', css_class='form-group col-md-4 mb-0'),
+                ),
+                Row(
+                    Column('loai_tai_lieu', css_class='form-group col-md-6 mb-0'),
+                    Column('duong_dan', css_class='form-group col-md-6 mb-0'),
+                ),
+                'tom_tat',
+                css_class='card-body'
+            )
+        )
+
+    class Meta:
+        model = TaiLieuHocTap
+        fields = [
+            'nhan_de', 'ngon_ngu', 'tac_gia', 'noi_xuat_ban', 'nha_xuat_ban', 
+            'nam_xuat_ban', 'dewey', 'cutter', 'tom_tat', 'loai_tai_lieu', 'duong_dan'
+        ]
+        widgets = {
+            'tom_tat': forms.Textarea(attrs={'rows': 3}),
+            'loai_tai_lieu': forms.Select(attrs={'class': 'select2'}),
+        }
+
+class DeCuongTaiLieuForm(forms.ModelForm):
+    class Meta:
+        model = DeCuongTaiLieu
+        fields = ['loai_lien_ket', 'tai_lieu']
+        widgets = {
+            'tai_lieu': forms.Select(attrs={'class': 'select2-ajax-tai-lieu'}),
+            'loai_lien_ket': forms.Select(attrs={'class': 'form-control'}),
+        }
+        labels = {
+            'tai_lieu': 'Tài liệu',
+            'loai_lien_ket': 'Loại học liệu',
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        tai_lieu_field = self.fields['tai_lieu']
+        
+        # This is the key change for AJAX behavior.
+        # We ensure the queryset is empty unless there's a specific instance,
+        # preventing the dropdown from loading all 7000+ items.
+        if self.instance and self.instance.pk and self.instance.tai_lieu:
+            # If the form is bound to an existing instance,
+            # the queryset must contain the selected item for validation.
+            tai_lieu_field.queryset = TaiLieuHocTap.objects.filter(pk=self.instance.tai_lieu.pk)
+            # Add a data attribute to the widget to hold the initial text.
+            # This is crucial for the frontend to display the initial value.
+            tai_lieu_field.widget.attrs['data-initial-text'] = self.instance.tai_lieu.nhan_de
+        else:
+            # For new forms, the queryset should be empty.
+            # The user will use the AJAX search to find and select a document.
+            tai_lieu_field.queryset = TaiLieuHocTap.objects.none()
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.disable_csrf = True
+        self.helper.layout = Layout(
+            Row(
+                Column('loai_lien_ket', css_class='form-group col-md-3 mb-0'),
+                Column('tai_lieu', css_class='form-group col-md-9 mb-0'),
+            )
+        )
+
+DeCuongTaiLieuFormSet = inlineformset_factory(
+    DeCuongHocPhan,
+    DeCuongTaiLieu,
+    form=DeCuongTaiLieuForm,
+    fk_name='de_cuong',
+    extra=1,
+    can_delete=True
+)

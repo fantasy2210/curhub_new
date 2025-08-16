@@ -458,19 +458,18 @@ class ChiTietHocPhanTrongCTDT(models.Model):
         ordering = ['chuong_trinh_dao_tao', 'hoc_phan__ma_hoc_phan']
 
 
-def str(self):
-    return f"{self.ma_muc_tieu} - {self.chuong_trinh_dao_tao.ten_nganh_ctdt}"
-
-class Meta:
-    verbose_name = "Mục tiêu Đào tạo CTĐT (PO)"
-    verbose_name_plural = "Các Mục tiêu Đào tạo CTĐT (PO)"
-    unique_together = [['chuong_trinh_dao_tao', 'ma_muc_tieu']]
-    ordering = ['chuong_trinh_dao_tao', 'ma_muc_tieu']
 
 
 # Model DeCuongHocPhan - Đề cương học phần
 
 class DeCuongHocPhan(models.Model):
+    TRANG_THAI_CHOICES = [
+        ('DRAFT', 'Bản nháp'),
+        ('PENDING_APPROVAL', 'Chờ duyệt'),
+        ('APPROVED', 'Đã phê duyệt'),
+        ('REJECTED', 'Bị từ chối'),
+    ]
+
     hoc_phan = models.ForeignKey(
         HocPhan, 
         on_delete=models.CASCADE, 
@@ -482,7 +481,30 @@ class DeCuongHocPhan(models.Model):
     so_phien_ban = models.CharField(max_length=20, blank=True, null=True, verbose_name="Số hiệu phiên bản (nếu có)")
     ngay_ban_hanh = models.DateField(verbose_name="Ngày ban hành/Hiệu lực")
     ly_do_cap_nhat = models.TextField(blank=True, null=True, verbose_name="Lý do cập nhật/Nội dung thay đổi chính")
-    # nguoi_cap_nhat = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Người cập nhật") # Nếu cần liên kết với User Django
+    
+    trang_thai = models.CharField(
+        max_length=20,
+        choices=TRANG_THAI_CHOICES,
+        default='DRAFT',
+        verbose_name="Trạng thái"
+    )
+    nguoi_tao = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='de_cuong_da_tao',
+        verbose_name="Người tạo"
+    )
+    nguoi_phe_duyet = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='de_cuong_da_phe_duyet',
+        verbose_name="Người phê duyệt"
+    )
+    ngay_phe_duyet = models.DateTimeField(null=True, blank=True, verbose_name="Ngày phê duyệt")
+
 
     la_phien_ban_hien_hanh = models.BooleanField(
         default=False, # Chỉ một phiên bản nên là True cho mỗi học phần
@@ -490,13 +512,27 @@ class DeCuongHocPhan(models.Model):
     )
     
     # Nội dung chi tiết của phiên bản đề cương này
-    muc_tieu_hoc_phan = models.TextField(blank=True, null=True, verbose_name="Mục tiêu học phần (của phiên bản này)")
-    tom_tat_noi_dung = models.TextField(blank=True, null=True, verbose_name="Tóm tắt nội dung học phần")
+    tom_tat_noi_dung = models.TextField(blank=True, null=True, verbose_name="Mô tả học phần")
     phuong_phap_day_hoc = models.TextField(blank=True, null=True, verbose_name="Phương pháp dạy và học")
-    nhiem_vu_sinh_vien = models.TextField(blank=True, null=True, verbose_name="Nhiệm vụ của sinh viên")
     thang_diem_danh_gia = models.TextField(blank=True, null=True, verbose_name="Thang điểm/Cách đánh giá")
-    tai_lieu_hoc_tap = models.TextField(blank=True, null=True, verbose_name="Tài liệu học tập")
+    # tai_lieu_hoc_tap is now handled by a ManyToManyField
     cac_yeu_cau_khac = models.TextField(blank=True, null=True, verbose_name="Các yêu cầu khác của học phần")
+    quy_dinh_hoc_phan = models.TextField(blank=True, null=True, verbose_name="Các quy định của học phần")
+    cac_loai_hoc_lieu_khac = models.TextField(blank=True, null=True, verbose_name="Các loại học liệu khác")
+
+    tai_lieu_hoc_tap = models.ManyToManyField(
+        'TaiLieuHocTap',
+        through='DeCuongTaiLieu',
+        related_name='de_cuong_su_dung',
+        verbose_name="Tài liệu học tập"
+    )
+
+    giang_vien_bien_soan = models.ManyToManyField(
+        'GiangVien',
+        related_name='de_cuong_bien_soan',
+        blank=True,
+        verbose_name="Giảng viên biên soạn"
+    )
     
     ngay_tao_record = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo bản ghi") # Đổi tên để phân biệt
     ngay_cap_nhat_record = models.DateTimeField(auto_now=True, verbose_name="Ngày cập nhật bản ghi") # Đổi tên
@@ -514,6 +550,9 @@ class DeCuongHocPhan(models.Model):
         verbose_name = "Phiên bản Đề cương Học phần"
         verbose_name_plural = "Các Phiên bản Đề cương Học phần"
         ordering = ['hoc_phan', '-ngay_ban_hanh']
+        permissions = [
+            ("can_approve_decuong", "Có thể phê duyệt Đề cương học phần"),
+        ]
         # unique_together = [['hoc_phan', 'so_phien_ban']] # Nếu so_phien_ban là duy nhất
 
 class ChuanDauRaHocPhan(models.Model):
@@ -557,6 +596,29 @@ class ChuanDauRaHocPhan(models.Model):
         blank=True, null=True,
         verbose_name="Loại Chuẩn đầu ra học phần"
     )
+    
+    dap_ung_cdr_ctdt = models.ManyToManyField(
+        ChuanDauRa,
+        blank=True,
+        related_name='clos_dap_ung',
+        verbose_name="Đáp ứng CĐR của CTĐT (PLO)"
+    )
+
+    trinh_do_nang_luc = models.TextField(
+        blank=True, null=True, 
+        verbose_name="Trình độ năng lực (ghi chú thêm)"
+    )
+
+    TUA_CHOICES = [
+        ('TUA', 'TUA'),
+        ('TU', 'TU'),
+    ]
+    tua = models.CharField(
+        max_length=3,
+        choices=TUA_CHOICES,
+        blank=True, null=True,
+        verbose_name="TUA"
+    )
 
     ngay_tao = models.DateTimeField(auto_now_add=True, verbose_name="Ngày tạo")
     ngay_cap_nhat = models.DateTimeField(auto_now=True, verbose_name="Ngày cập nhật")
@@ -571,6 +633,52 @@ class ChuanDauRaHocPhan(models.Model):
         ordering = ['de_cuong', 'ma_clo']
 
 
+class TaiLieuHocTap(models.Model):
+    LOAI_TAI_LIEU_CHOICES = [
+        ('SACH', 'Sách'),
+        ('GIAO_TRINH', 'Giáo trình'),
+        ('BAI_BAO', 'Bài báo khoa học'),
+        ('WEBSITE', 'Trang web/Tài liệu online'),
+        ('KHAC', 'Khác'),
+    ]
+    nhan_de = models.CharField(max_length=500, verbose_name="Nhan đề", null=True, blank=True)
+    ngon_ngu = models.CharField(max_length=50, blank=True, null=True, verbose_name="Ngôn ngữ")
+    tac_gia = models.CharField(max_length=500, blank=True, null=True, verbose_name="Tác giả")
+    noi_xuat_ban = models.CharField(max_length=255, blank=True, null=True, verbose_name="Nơi xuất bản")
+    nha_xuat_ban = models.CharField(max_length=255, blank=True, null=True, verbose_name="Nhà xuất bản")
+    nam_xuat_ban = models.PositiveIntegerField(blank=True, null=True, verbose_name="Năm xuất bản")
+    dewey = models.CharField(max_length=50, blank=True, null=True, verbose_name="Phân loại Dewey")
+    cutter = models.CharField(max_length=50, blank=True, null=True, verbose_name="Chỉ số Cutter")
+    tom_tat = models.TextField(blank=True, null=True, verbose_name="Tóm tắt")
+    loai_tai_lieu = models.CharField(max_length=20, choices=LOAI_TAI_LIEU_CHOICES, default='SACH', verbose_name="Loại tài liệu")
+    duong_dan = models.URLField(blank=True, null=True, verbose_name="Đường dẫn (URL)")
+    oai_identifier = models.CharField(max_length=191, unique=True, null=True, blank=True, verbose_name="OAI Identifier")
+    bib_id = models.IntegerField(unique=True, null=True, blank=True, verbose_name="BIB ID from external API")
+    
+    ngay_tao = models.DateTimeField(auto_now_add=True)
+    ngay_cap_nhat = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.nhan_de
+
+    class Meta:
+        verbose_name = "Tài liệu học tập"
+        verbose_name_plural = "Kho Tài liệu học tập"
+        ordering = ['-nam_xuat_ban', 'nhan_de']
+
+class DeCuongTaiLieu(models.Model):
+    LOAI_LIEN_KET_CHOICES = [
+        ('CHINH', 'Tài liệu chính'),
+        ('THAM_KHAO', 'Tài liệu tham khảo'),
+    ]
+    de_cuong = models.ForeignKey(DeCuongHocPhan, on_delete=models.CASCADE)
+    tai_lieu = models.ForeignKey(TaiLieuHocTap, on_delete=models.CASCADE)
+    loai_lien_ket = models.CharField(max_length=20, choices=LOAI_LIEN_KET_CHOICES, default='THAM_KHAO', verbose_name="Phân loại")
+
+    class Meta:
+        verbose_name = "Tài liệu cho Đề cương"
+        verbose_name_plural = "Các Tài liệu cho Đề cương"
+        unique_together = [['de_cuong', 'tai_lieu']]
 
 
 # Model MaTranCDR_CTHP - Ma trận chuẩn đầu ra của học phần trong CTĐT
@@ -624,6 +732,7 @@ class NoiDungChiTietDeCuong(models.Model):
     so_gio_ly_thuyet = models.PositiveIntegerField(default=0, verbose_name="Số giờ lý thuyết")
     so_gio_thuc_hanh = models.PositiveIntegerField(default=0, verbose_name="Số giờ thực hành")
     so_gio_tu_hoc = models.PositiveIntegerField(default=0, verbose_name="Số giờ tự học")
+    ky_nang_thai_do = models.TextField(blank=True, null=True, verbose_name="Kỹ năng mềm và thái độ")
     chuan_dau_ra_lien_quan = models.ManyToManyField(
         ChuanDauRaHocPhan,
         blank=True,

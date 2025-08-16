@@ -39,7 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "daotao.apps.DaotaoConfig",
     "crispy_forms",
-    "crispy_bootstrap5",
+    "crispy_bootstrap4",
     "widget_tweaks",
 ]
 
@@ -149,5 +149,12 @@ LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/daotao/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
-CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
-CRISPY_TEMPLATE_PACK = "bootstrap5"
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
+CRISPY_TEMPLATE_PACK = "bootstrap4"
+
+# AI/LLM Configuration
+# To enable AI suggestions, add your OpenAI API key to settings.py
+# OPENAI_API_KEY = 'your-openai-api-key-here'
+# OPENAI_MODEL = "gpt-3.5-turbo"  # Default model
+# OPENAI_MAX_TOKENS = 500  # Default max tokens
+# OPENAI_TEMPERATURE = 0.7  # Default temperature

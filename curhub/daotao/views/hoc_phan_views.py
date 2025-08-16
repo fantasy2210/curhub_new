@@ -8,10 +8,12 @@ from ..forms import (
     DeCuongHocPhanForm,
     ChuanDauRaHocPhanFormSet,
     NoiDungChiTietDeCuongFormSet,
-    HinhThucDanhGiaFormSet
+    HinhThucDanhGiaFormSet,
+    DeCuongTaiLieuFormSet
 )
 from django.core.paginator import Paginator
 from django.db.models import Q
+from django.utils import timezone
 
 @login_required
 @permission_required('daotao.view_hocphan', raise_exception=True)
@@ -178,22 +180,57 @@ def danh_sach_de_cuong(request, pk_hoc_phan):
 @permission_required('daotao.add_decuonghocphan', raise_exception=True)
 def them_de_cuong(request, pk_hoc_phan):
     hoc_phan = get_object_or_404(HocPhan, pk=pk_hoc_phan)
+    de_cuong = DeCuongHocPhan(hoc_phan=hoc_phan, nguoi_tao=request.user) # Create a new, unsaved instance
+
     if request.method == 'POST':
         form = DeCuongHocPhanForm(request.POST)
-        if form.is_valid():
-            de_cuong = form.save(commit=False)
-            de_cuong.hoc_phan = hoc_phan
-            de_cuong.save()
-            messages.success(request, f"Đã thêm đề cương '{de_cuong.ten_de_cuong_phien_ban}' thành công!")
+        # Pass a dummy queryset for the formsets to validate, but they won't be saved until the main object is.
+        clo_formset = ChuanDauRaHocPhanFormSet(request.POST, instance=de_cuong, prefix='clos')
+        noi_dung_formset = NoiDungChiTietDeCuongFormSet(request.POST, instance=de_cuong, prefix='noidungs')
+        danh_gia_formset = HinhThucDanhGiaFormSet(request.POST, instance=de_cuong, prefix='danhgias')
+        tai_lieu_formset = DeCuongTaiLieuFormSet(request.POST, instance=de_cuong, prefix='tailieus')
+
+        if form.is_valid() and clo_formset.is_valid() and noi_dung_formset.is_valid() and danh_gia_formset.is_valid() and tai_lieu_formset.is_valid():
+            # Save the main form first to get a PK
+            de_cuong_instance = form.save(commit=False)
+            de_cuong_instance.hoc_phan = hoc_phan
+            de_cuong_instance.nguoi_tao = request.user
+            de_cuong_instance.save()
+
+            # Now, save the formsets with the newly created instance
+            clo_formset.instance = de_cuong_instance
+            clo_formset.save()
+            
+            noi_dung_formset.instance = de_cuong_instance
+            noi_dung_formset.save()
+
+            danh_gia_formset.instance = de_cuong_instance
+            danh_gia_formset.save()
+
+            tai_lieu_formset.instance = de_cuong_instance
+            tai_lieu_formset.save()
+            
+            messages.success(request, f"Đã tạo đề cương '{de_cuong_instance.ten_de_cuong_phien_ban}' thành công!")
             return redirect('daotao:danh_sach_de_cuong', pk_hoc_phan=hoc_phan.pk)
         else:
             messages.error(request, "Có lỗi xảy ra khi thêm đề cương. Vui lòng kiểm tra lại các trường.")
     else:
         form = DeCuongHocPhanForm()
+        clo_formset = ChuanDauRaHocPhanFormSet(instance=de_cuong, prefix='clos')
+        noi_dung_formset = NoiDungChiTietDeCuongFormSet(instance=de_cuong, prefix='noidungs')
+        danh_gia_formset = HinhThucDanhGiaFormSet(instance=de_cuong, prefix='danhgias')
+        tai_lieu_formset = DeCuongTaiLieuFormSet(instance=de_cuong, prefix='tailieus')
+
     context = {
         'form': form,
+        'clo_formset': clo_formset,
+        'noi_dung_formset': noi_dung_formset,
+        'danh_gia_formset': danh_gia_formset,
+        'tai_lieu_formset': tai_lieu_formset,
         'hoc_phan': hoc_phan,
-        'page_title': f'Thêm Đề cương cho học phần: {hoc_phan.ten_hoc_phan}'
+        'de_cuong': None, # No existing de_cuong object yet
+        'page_title': f'Thêm Đề cương cho học phần: {hoc_phan.ten_hoc_phan}',
+        'is_new': True
     }
     return render(request, 'daotao/de_cuong_form.html', context)
 
@@ -202,23 +239,102 @@ def them_de_cuong(request, pk_hoc_phan):
 def sua_de_cuong(request, pk_de_cuong):
     de_cuong = get_object_or_404(DeCuongHocPhan, pk=pk_de_cuong)
     hoc_phan = de_cuong.hoc_phan
+
+    # Chuẩn bị form_kwargs để truyền instance de_cuong vào ChuanDauRaHocPhanForm
+    clo_form_kwargs = {'de_cuong': de_cuong}
+
     if request.method == 'POST':
         form = DeCuongHocPhanForm(request.POST, instance=de_cuong)
-        if form.is_valid():
+        # Truyền form_kwargs khi khởi tạo formset
+        clo_formset = ChuanDauRaHocPhanFormSet(request.POST, instance=de_cuong, prefix='clos', form_kwargs=clo_form_kwargs)
+        noi_dung_formset = NoiDungChiTietDeCuongFormSet(request.POST, instance=de_cuong, prefix='noidungs')
+        hinh_thuc_danh_gia_formset = HinhThucDanhGiaFormSet(request.POST, instance=de_cuong, prefix='danhgias')
+
+        # The tai_lieu_formset is no longer needed as its functionality is merged into the main form.
+        if form.is_valid() and clo_formset.is_valid() and noi_dung_formset.is_valid() and hinh_thuc_danh_gia_formset.is_valid():
+            # The custom save() method in DeCuongHocPhanForm now handles saving the document relations.
             form.save()
+            clo_formset.save()
+            noi_dung_formset.save()
+            hinh_thuc_danh_gia_formset.save()
+            
             messages.success(request, f"Đã cập nhật đề cương '{de_cuong.ten_de_cuong_phien_ban}' thành công!")
-            return redirect('daotao:danh_sach_de_cuong', pk_hoc_phan=hoc_phan.pk)
+            return redirect('daotao:sua_de_cuong', pk_de_cuong=de_cuong.pk)
         else:
+            # In ra lỗi để debug
+            print("Form errors:", form.errors)
+            print("CLO Formset errors:", clo_formset.errors)
+            print("Noi Dung Formset errors:", noi_dung_formset.errors)
+            print("Hinh Thuc Danh Gia Formset errors:", hinh_thuc_danh_gia_formset.errors)
             messages.error(request, "Có lỗi xảy ra khi cập nhật đề cương. Vui lòng kiểm tra lại các trường.")
     else:
         form = DeCuongHocPhanForm(instance=de_cuong)
+        # Truyền form_kwargs khi khởi tạo formset
+        clo_formset = ChuanDauRaHocPhanFormSet(instance=de_cuong, prefix='clos', form_kwargs=clo_form_kwargs)
+        noi_dung_formset = NoiDungChiTietDeCuongFormSet(instance=de_cuong, prefix='noidungs')
+        hinh_thuc_danh_gia_formset = HinhThucDanhGiaFormSet(instance=de_cuong, prefix='danhgias')
+
+    clo_groups = {
+        'KT': 'Về kiến thức',
+        'KN': 'Về kỹ năng',
+        'TD': 'Về thái độ',
+    }
+
+    # Set initial values for the form based on the JSON state provided
+    if not form.initial.get('tom_tat_noi_dung'):
+        form.initial['tom_tat_noi_dung'] = hoc_phan.mo_ta_hoc_phan or ''
+
     context = {
         'form': form,
+        'clo_formset': clo_formset,
+        # 'tai_lieu_formset' is removed as it's no longer used
+        'noi_dung_formset': noi_dung_formset,
+        'hinh_thuc_danh_gia_formset': hinh_thuc_danh_gia_formset,
         'hoc_phan': hoc_phan,
         'de_cuong': de_cuong,
-        'page_title': f'Cập nhật Đề cương: {de_cuong.ten_de_cuong_phien_ban}'
+        'page_title': f'Cập nhật Đề cương chi tiết: {hoc_phan.ten_hoc_phan}',
+        'is_new': False,
+        'clo_groups': clo_groups,
     }
     return render(request, 'daotao/de_cuong_form.html', context)
+
+@login_required
+@permission_required('daotao.change_decuonghocphan', raise_exception=True) # Or a more specific permission
+def submit_for_approval(request, pk_de_cuong):
+    de_cuong = get_object_or_404(DeCuongHocPhan, pk=pk_de_cuong)
+    if de_cuong.trang_thai == 'DRAFT' or de_cuong.trang_thai == 'REJECTED':
+        de_cuong.trang_thai = 'PENDING_APPROVAL'
+        de_cuong.save()
+        messages.success(request, f"Đã gửi duyệt đề cương '{de_cuong.ten_de_cuong_phien_ban}'.")
+    else:
+        messages.warning(request, "Đề cương không ở trạng thái có thể gửi duyệt.")
+    return redirect('daotao:danh_sach_de_cuong', pk_hoc_phan=de_cuong.hoc_phan.pk)
+
+@login_required
+@permission_required('daotao.can_approve_decuong', raise_exception=True) # Custom permission
+def approve_de_cuong(request, pk_de_cuong):
+    de_cuong = get_object_or_404(DeCuongHocPhan, pk=pk_de_cuong)
+    if de_cuong.trang_thai == 'PENDING_APPROVAL':
+        de_cuong.trang_thai = 'APPROVED'
+        de_cuong.nguoi_phe_duyet = request.user
+        de_cuong.ngay_phe_duyet = timezone.now()
+        de_cuong.save()
+        messages.success(request, f"Đã phê duyệt đề cương '{de_cuong.ten_de_cuong_phien_ban}'.")
+    else:
+        messages.warning(request, "Đề cương không ở trạng thái chờ duyệt.")
+    return redirect('daotao:danh_sach_de_cuong', pk_hoc_phan=de_cuong.hoc_phan.pk)
+
+@login_required
+@permission_required('daotao.can_approve_decuong', raise_exception=True) # Custom permission
+def reject_de_cuong(request, pk_de_cuong):
+    de_cuong = get_object_or_404(DeCuongHocPhan, pk=pk_de_cuong)
+    if de_cuong.trang_thai == 'PENDING_APPROVAL':
+        de_cuong.trang_thai = 'REJECTED'
+        de_cuong.save()
+        messages.info(request, f"Đã từ chối đề cương '{de_cuong.ten_de_cuong_phien_ban}'.")
+    else:
+        messages.warning(request, "Đề cương không ở trạng thái chờ duyệt.")
+    return redirect('daotao:danh_sach_de_cuong', pk_hoc_phan=de_cuong.hoc_phan.pk)
 
 def xoa_de_cuong(request, pk_de_cuong):
     pass
