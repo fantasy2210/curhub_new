@@ -1190,3 +1190,48 @@ def xoa_muc_tieu_dao_tao(request, pk_po):
     
     po.delete()
     return JsonResponse({'status': 'success', 'message': 'Đã xóa Mục tiêu Đào tạo.'})
+
+@login_required
+@permission_required('daotao.can_submit_cdr_for_approval', raise_exception=True)
+@require_http_methods(["POST"])
+def gui_duyet_cdr(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    if ctdt.trang_thai_cdr == 'DRAFT':
+        ctdt.trang_thai_cdr = 'PENDING_APPROVAL'
+        ctdt.save()
+        messages.success(request, f"Đã gửi duyệt Chuẩn Đầu Ra cho chương trình '{ctdt.ten_nganh_ctdt}'.")
+    else:
+        messages.warning(request, "Chỉ có thể gửi duyệt CĐR ở trạng thái 'Bản nháp'.")
+    return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)
+
+@login_required
+@require_http_methods(["POST"])
+def xu_ly_duyet_cdr(request, pk_ctdt):
+    ctdt = get_object_or_404(ChuongTrinhDaoTao, pk=pk_ctdt)
+    action = request.POST.get('action')
+
+    if ctdt.trang_thai_cdr != 'PENDING_APPROVAL':
+        messages.warning(request, "Chỉ có thể xử lý CĐR đang chờ duyệt.")
+        return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)
+
+    if action == 'approve' and request.user.has_perm('daotao.can_approve_cdr'):
+        ctdt.trang_thai_cdr = 'APPROVED'
+        ctdt.save()
+        messages.success(request, f"Đã phê duyệt CĐR cho chương trình '{ctdt.ten_nganh_ctdt}'.")
+
+    elif action == 'reject' and request.user.has_perm('daotao.can_reject_cdr'):
+        ly_do = request.POST.get('ly_do_cdr', '').strip()
+        if not ly_do:
+            messages.error(request, "Cần phải cung cấp lý do khi yêu cầu chỉnh sửa CĐR.")
+            return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)
+        
+        ctdt.trang_thai_cdr = 'DRAFT'
+        # Consider adding a new field for CDR rejection notes if needed
+        ctdt.ghi_chu_ctdt = (ctdt.ghi_chu_ctdt or "") + f"\nGhi chú CĐR ({timezone.now().strftime('%d/%m/%Y')}): {ly_do}"
+        ctdt.save()
+        messages.warning(request, f"Đã gửi yêu cầu chỉnh sửa CĐR cho chương trình '{ctdt.ten_nganh_ctdt}'.")
+    
+    else:
+        messages.error(request, "Hành động không hợp lệ hoặc bạn không có quyền thực hiện với CĐR.")
+
+    return redirect('daotao:chi_tiet_ctdt', pk_ctdt=pk_ctdt)

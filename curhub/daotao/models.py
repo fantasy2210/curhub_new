@@ -225,7 +225,13 @@ class ChuongTrinhDaoTao(models.Model):
         max_length=20,
         choices=TRANG_THAI_CHOICES,
         default='DRAFT',
-        verbose_name="Trạng thái"
+        verbose_name="Trạng thái CTĐT"
+    )
+    trang_thai_cdr = models.CharField(
+        max_length=20,
+        choices=TRANG_THAI_CHOICES,
+        default='DRAFT',
+        verbose_name="Trạng thái CĐR"
     )
     phien_ban_goc = models.ForeignKey(
         'self',
@@ -267,6 +273,10 @@ class ChuongTrinhDaoTao(models.Model):
             ("can_create_new_version", "Có thể tạo phiên bản mới cho CTĐT"),
             ("can_archive_ctdt", "Có thể lưu trữ một CTĐT cũ"),
             ("can_manage_program_structure", "Có thể quản lý cấu trúc CTĐT (PO, PLO, học phần)"),
+            # Permissions for separate CDR approval
+            ("can_approve_cdr", "Có thể phê duyệt Chuẩn đầu ra"),
+            ("can_reject_cdr", "Có thể yêu cầu chỉnh sửa/từ chối CĐR"),
+            ("can_submit_cdr_for_approval", "Có thể gửi duyệt CĐR"),
         ]
 
     @property

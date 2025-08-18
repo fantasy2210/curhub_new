@@ -37,3 +37,21 @@ def sum_credits(hoc_phan_list):
     for hp in hoc_phan_list:
         total += hp.tong_so_tin_chi_apdung or 0
     return total
+
+@register.filter(name='trang_thai_badge_class')
+def trang_thai_badge_class(trang_thai_key):
+    """
+    Returns the Bootstrap badge class based on the status key.
+    """
+    if trang_thai_key == 'APPROVED':
+        return 'badge-success'
+    elif trang_thai_key == 'PENDING_APPROVAL':
+        return 'badge-info'
+    elif trang_thai_key == 'DRAFT':
+        return 'badge-secondary'
+    elif trang_thai_key == 'REJECTED':
+        return 'badge-danger'
+    elif trang_thai_key == 'ARCHIVED':
+        return 'badge-dark'
+    else:
+        return 'badge-light'

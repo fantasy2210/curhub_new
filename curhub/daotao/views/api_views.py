@@ -1,8 +1,9 @@
+import requests
 from django.http import JsonResponse, Http404
 from django.views.decorators.http import require_POST, require_http_methods
 from django.contrib.auth.decorators import login_required, permission_required
 import json
-from ..suggestion_service import get_ai_suggestions, generate_syllabus_suggestions
+from ..suggestion_service import get_ai_suggestions, generate_syllabus_suggestions, evaluate_cdr_with_llm
 from ..models import (
     NganhDaoTao, ChuongTrinhDaoTao, HocPhan, ChiTietHocPhanTrongCTDT,
     DonViDaoTao, MucTieuDaoTao, ChuanDauRa, DanhMucKienThuc, DeCuongHocPhan, ChuanDauRaHocPhan, NoiDungChiTietDeCuong, HinhThucDanhGia,
@@ -455,11 +456,87 @@ def api_program_flowchart_data(request, pk_ctdt):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-def danh_gia_cdr_api(request):
-    return JsonResponse({})
+from django.views.decorators.csrf import csrf_exempt
 
+@csrf_exempt
+@require_POST
+def danh_gia_cdr_api(request):
+    # This function is intended for LLM-based evaluation.
+    # For now, we'll return a placeholder success message.
+    # In a real scenario, this would involve processing input,
+    # calling an LLM, and returning evaluation results.
+    try:
+        data = json.loads(request.body)
+        # Process data here, e.g., extract CDR content for LLM evaluation
+        cdr_text = data.get('cdr_text', '') # Extract cdr_text from the received data
+        
+        # Call the LLM evaluation function
+        evaluation_result = evaluate_cdr_with_llm(cdr_text)
+
+        # Prepare the response based on the structured evaluation_result
+        if isinstance(evaluation_result, dict):
+            response_data = {
+                "status": "success",
+                "message": "CDR evaluation completed.",
+                "cdr_text": cdr_text,
+                "evaluation_results": {
+                    "structural_analysis": {
+                        "verb": evaluation_result.get("structural_analysis", {}).get("verb", "N/A"),
+                        "knowledge": evaluation_result.get("structural_analysis", {}).get("knowledge", "N/A"),
+                        "context": evaluation_result.get("structural_analysis", {}).get("context", "N/A"),
+                    },
+                    "evaluation": {
+                        "relevance_level": evaluation_result.get("evaluation", {}).get("relevance_level", "N/A"),
+                        "clarity": evaluation_result.get("evaluation", {}).get("clarity", "N/A"),
+                    },
+                    "improvement_suggestions": "\n".join(evaluation_result.get("improvement_suggestions", ["Không có đề xuất."])), # Join array into a single string
+                    "cdr_cai_thien": evaluation_result.get("suggested_rewrite", "") # New field for suggested rewrite
+                }
+            }
+        else:
+            # Handle cases where LLM response was not a dict (e.g., error message)
+            response_data = {
+                "status": "error",
+                "message": "LLM evaluation failed or returned an unexpected format.",
+                "cdr_text": cdr_text,
+                "evaluation_result_raw": evaluation_result # Include raw output for debugging
+            }
+        return JsonResponse(response_data)
+    except json.JSONDecodeError:
+        return JsonResponse({'status': 'error', 'message': 'Invalid JSON payload.'}, status=400)
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 def get_ollama_status(request):
-    return JsonResponse({})
+    """
+    Checks the status of the Ollama server.
+    """
+    OLLAMA_API_URL = "http://172.250.4.30:11434/api/tags" 
+    try:
+        response = requests.get(OLLAMA_API_URL, timeout=5)
+        response.raise_for_status()  # Raise an exception for bad status codes (4xx or 5xx)
+        
+        # If we get here, the connection was successful
+        data = response.json()
+        return JsonResponse({
+            'status': 'ok',
+            'details': data
+        })
+
+    except requests.exceptions.Timeout:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Connection timed out. The Ollama server is not responding.'
+        }, status=504)
+    except requests.exceptions.ConnectionError:
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Connection failed. Could not connect to the Ollama server. Is it running?'
+        }, status=503)
+    except requests.exceptions.RequestException as e:
+        return JsonResponse({
+            'status': 'error',
+            'message': f'An unexpected error occurred: {str(e)}'
+        }, status=500)
 
 def api_suggest_tai_lieu(request, pk_de_cuong):
     return JsonResponse({})

@@ -20,6 +20,9 @@ urlpatterns = [
     path('ctdt/<int:pk_ctdt>/xoa/', ctdt_views.xoa_ctdt, name='xoa_ctdt'),
     path('ctdt/<int:pk_ctdt>/gui-duyet/', ctdt_views.gui_duyet_ctdt, name='gui_duyet_ctdt'),
     path('ctdt/<int:pk_ctdt>/xu-ly-duyet/', ctdt_views.xu_ly_duyet_ctdt, name='xu_ly_duyet_ctdt'),
+    # URLs for separate CDR approval
+    path('ctdt/<int:pk_ctdt>/gui-duyet-cdr/', ctdt_views.gui_duyet_cdr, name='gui_duyet_cdr'),
+    path('ctdt/<int:pk_ctdt>/xu-ly-duyet-cdr/', ctdt_views.xu_ly_duyet_cdr, name='xu_ly_duyet_cdr'),
     path('ctdt/<int:pk_ctdt>/tao-phien-ban-moi/', ctdt_views.tao_phien_ban_moi_ctdt, name='tao_phien_ban_moi_ctdt'),
     path('ctdt/doi-sanh/', ctdt_views.doi_sanh_ctdt, name='doi_sanh_ctdt'),
     path('ctdt/luu-tru/', ctdt_views.luu_tru_ctdt, name='luu_tru_ctdt'),
