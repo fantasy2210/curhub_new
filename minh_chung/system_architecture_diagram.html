@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sơ đồ Kiến trúc Hệ thống CURHUB</title>
+    <style>
+        body {
+            font-family: 'Times New Roman', serif;
+            background: white;
+            margin: 0;
+            padding: 20px;
+            color: #000;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #000;
+            padding: 20px;
+        }
+
+        .title {
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #000;
+        }
+
+        .architecture {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .layer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .box {
+            background: white;
+            border: 2px solid #000;
+            padding: 10px;
+            text-align: center;
+            font-size: 11px;
+            min-height: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            line-height: 1.3;
+        }
+
+        .user-layer {
+            width: 120px;
+        }
+
+        .web-layer {
+            width: 140px;
+        }
+
+        .server-layer {
+            width: 160px;
+        }
+
+        .django-container {
+            border: 3px solid #000;
+            padding: 15px;
+            width: 90%;
+            max-width: 700px;
+            background: white;
+        }
+
+        .django-title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 12px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+        }
+
+        .django-layer {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .django-layer.three-cols {
+            grid-template-columns: repeat(3, 1fr);
+        }
+
+        .django-layer.one-col {
+            grid-template-columns: 1fr;
+        }
+
+        .django-box {
+            border: 1px solid #000;
+            padding: 8px;
+            font-size: 9px;
+            min-height: 35px;
+            background: white;
+        }
+
+        .layer-separator {
+            width: 100%;
+            height: 1px;
+            background: #000;
+            margin: 10px 0;
+        }
+
+        .layer-label {
+            font-size: 10px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .database-box {
+            width: 200px;
+            margin-top: 15px;
+        }
+
+        .arrow {
+            font-size: 16px;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .vertical-line {
+            width: 2px;
+            height: 20px;
+            background: #000;
+            margin: 0 auto;
+        }
+
+        .horizontal-arrow {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .arrow-line {
+            width: 30px;
+            height: 2px;
+            background: #000;
+            position: relative;
+        }
+
+        .arrow-line::after {
+            content: '';
+            position: absolute;
+            right: -5px;
+            top: -3px;
+            width: 0;
+            height: 0;
+            border-left: 8px solid #000;
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+        }
+
+        @media print {
+            body {
+                margin: 0;
+                padding: 10px;
+            }
+            
+            .container {
+                border: none;
+                padding: 0;
+            }
+        }
+
+        .figure-caption {
+            text-align: center;
+            font-size: 11px;
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        @media (max-width: 600px) {
+            .django-layer {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .layer {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .horizontal-arrow {
+                transform: rotate(90deg);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">Sơ đồ Kiến trúc Hệ thống Quản lý Chương trình Đào tạo (CURHUB)</div>
+        
+        <div class="architecture">
+            <!-- User and Web Layers -->
+            <div class="layer">
+                <div class="box user-layer">
+                    <strong>Người dùng</strong><br>
+                    (BGH, ĐVCM)
+                </div>
+                <div class="horizontal-arrow">
+                    <div class="arrow-line"></div>
+                </div>
+                <div class="box web-layer">
+                    <strong>Web Browser</strong><br>
+                    (Desktop/Mobile)
+                </div>
+                <div class="horizontal-arrow">
+                    <div class="arrow-line"></div>
+                </div>
+                <div class="box server-layer">
+                    <strong>Nginx</strong><br>
+                    (Reverse Proxy)
+                </div>
+            </div>
+
+            <div class="vertical-line"></div>
+
+            <!-- Application Server -->
+            <div class="layer">
+                <div class="box server-layer">
+                    <strong>Gunicorn</strong><br>
+                    (Application Server)
+                </div>
+            </div>
+
+            <div class="vertical-line"></div>
+
+            <!-- Django Application -->
+            <div class="django-container">
+                <div class="django-title">DJANGO APPLICATION FRAMEWORK</div>
+                
+                <!-- Presentation Layer -->
+                <div class="layer-label">Tầng Giao diện (Presentation Layer)</div>
+                <div class="django-layer">
+                    <div class="django-box">
+                        <strong>Middleware</strong><br>
+                        Authentication<br>
+                        Security
+                    </div>
+                    <div class="django-box">
+                        <strong>URL Routing</strong><br>
+                        URL Dispatcher<br>
+                        (urls.py)
+                    </div>
+                    <div class="django-box">
+                        <strong>Templates</strong><br>
+                        Views<br>
+                        UI Components
+                    </div>
+                    <div class="django-box">
+                        <strong>Forms</strong><br>
+                        Input Validation<br>
+                        Data Processing
+                    </div>
+                </div>
+
+                <div class="layer-separator"></div>
+
+                <!-- Business Logic Layer -->
+                <div class="layer-label">Tầng Logic Nghiệp vụ (Business Logic Layer)</div>
+                <div class="django-layer">
+                    <div class="django-box">
+                        <strong>Module CTĐT</strong><br>
+                        Quản lý chương trình<br>
+                        đào tạo
+                    </div>
+                    <div class="django-box">
+                        <strong>Module Mở ngành</strong><br>
+                        Quản lý ngành<br>
+                        đào tạo mới
+                    </div>
+                    <div class="django-box">
+                        <strong>Module Quản trị</strong><br>
+                        Quản lý hệ thống<br>
+                        và người dùng
+                    </div>
+                    <div class="django-box">
+                        <strong>Services</strong><br>
+                        Business Logic<br>
+                        Processing
+                    </div>
+                </div>
+
+                <div class="layer-separator"></div>
+
+                <!-- Data Access Layer -->
+                <div class="layer-label">Tầng Truy cập Dữ liệu (Data Access Layer)</div>
+                <div class="django-layer one-col">
+                    <div class="django-box" style="text-align: center;">
+                        <strong>Django ORM (Object-Relational Mapping)</strong><br>
+                        Database Abstraction Layer
+                    </div>
+                </div>
+            </div>
+
+            <div class="vertical-line"></div>
+
+            <!-- Database Layer -->
+            <div class="layer">
+                <div class="box database-box">
+                    <strong>MySQL Database</strong><br>
+                    Cơ sở dữ liệu quan hệ
+                </div>
+            </div>
+        </div>
+
+        <div class="figure-caption">
+            Hình 1. Kiến trúc tổng thể của hệ thống quản lý chương trình đào tạo CURHUB
+        </div>
+    </div>
+</body>
+</html>
